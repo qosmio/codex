@@ -1,6 +1,10 @@
 mod description;
 mod response;
 mod runtime;
+#[cfg(feature = "runtime")]
+mod service;
+#[cfg(not(feature = "runtime"))]
+#[path = "service_stub.rs"]
 mod service;
 
 pub use description::CODE_MODE_PRAGMA_PREFIX;

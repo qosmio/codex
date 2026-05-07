@@ -17,6 +17,11 @@ doctest = false
 [lints]
 workspace = true
 
+[features]
+default = []
+code-mode = ["codex-core/code-mode"]
+realtime-webrtc = ["codex-tui/realtime-webrtc"]
+
 [dependencies]
 anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
