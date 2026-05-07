@@ -182,6 +182,11 @@ pub struct ConfigToml {
     /// Set to an empty string to disable automatic commit attribution.
     pub commit_attribution: Option<String>,
 
+    /// When enabled, publication text such as commit messages, branch names,
+    /// PR titles, and PR bodies should avoid AI attribution, internal tool
+    /// names, private project names, model names, and generated-by text.
+    pub public_contribution_mode: Option<bool>,
+
     /// When set, restricts ChatGPT login to a specific workspace identifier.
     #[serde(default)]
     pub forced_chatgpt_workspace_id: Option<String>,

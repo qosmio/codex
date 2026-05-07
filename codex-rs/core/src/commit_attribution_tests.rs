@@ -1,5 +1,7 @@
+use super::CommitPublicationConfig;
 use super::build_commit_message_trailer;
 use super::commit_message_trailer_instruction;
+use super::commit_publication_instructions;
 use super::resolve_attribution_value;
 
 #[test]
@@ -40,4 +42,33 @@ fn instruction_mentions_trailer_and_omits_generated_with() {
     assert!(instruction.contains("Co-authored-by: AgentX <agent@example.com>"));
     assert!(instruction.contains("exactly once"));
     assert!(!instruction.contains("Generated-with"));
+}
+
+#[test]
+fn public_contribution_mode_suppresses_attribution_and_adds_hygiene_instruction() {
+    let instructions = commit_publication_instructions(CommitPublicationConfig {
+        commit_attribution: Some("AgentX <agent@example.com>"),
+        public_contribution_mode: true,
+    });
+
+    assert_eq!(instructions.len(), 1);
+    let instruction = &instructions[0];
+    assert!(instruction.contains("PUBLIC CONTRIBUTION MODE"));
+    assert!(instruction.contains("Commit messages"));
+    assert!(instruction.contains("PR titles"));
+    assert!(instruction.contains("PR bodies"));
+    assert!(!instruction.contains("Co-authored-by: AgentX <agent@example.com>"));
+}
+
+#[test]
+fn publication_instructions_use_attribution_when_public_mode_is_disabled() {
+    assert_eq!(
+        commit_publication_instructions(CommitPublicationConfig {
+            commit_attribution: Some("AgentX <agent@example.com>"),
+            public_contribution_mode: false,
+        }),
+        vec![
+            "When you write or edit a git commit message, ensure the message ends with this trailer exactly once:\nCo-authored-by: AgentX <agent@example.com>\n\nRules:\n- Keep existing trailers and append this trailer at the end if missing.\n- Do not duplicate this trailer if it already exists.\n- Keep one blank line between the commit body and trailer block.".to_string()
+        ]
+    );
 }

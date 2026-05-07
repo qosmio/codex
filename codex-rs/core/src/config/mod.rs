@@ -479,6 +479,10 @@ pub struct Config {
     /// - `Some("...")`: use the provided attribution text verbatim
     pub commit_attribution: Option<String>,
 
+    /// Whether publication text should avoid AI attribution and internal
+    /// implementation details.
+    pub public_contribution_mode: bool,
+
     /// Optional external notifier command. When set, Codex will spawn this
     /// program after each completed *turn* (i.e. when the agent finishes
     /// processing a user submission). The value must be the full command
@@ -2756,6 +2760,7 @@ impl Config {
         });
 
         let commit_attribution = cfg.commit_attribution;
+        let public_contribution_mode = cfg.public_contribution_mode.unwrap_or(false);
 
         // Load base instructions override from a file if specified. If the
         // path is relative, resolve it against the effective cwd so the
@@ -3001,6 +3006,7 @@ impl Config {
             developer_instructions,
             compact_prompt,
             commit_attribution,
+            public_contribution_mode,
             include_permissions_instructions,
             include_apps_instructions,
             include_skill_instructions,

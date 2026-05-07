@@ -16,7 +16,8 @@ use crate::agent::agent_status_from_event;
 use crate::agent::status::is_final;
 use crate::attestation::AttestationProvider;
 use crate::build_available_skills;
-use crate::commit_attribution::commit_message_trailer_instruction;
+use crate::commit_attribution::CommitPublicationConfig;
+use crate::commit_attribution::commit_publication_instructions;
 use crate::compact;
 use crate::config::ManagedFeatures;
 use crate::config::resolve_tool_suggest_config_from_layer_stack;
@@ -2730,11 +2731,12 @@ impl Session {
             developer_sections.push(plugin_instructions.render());
         }
         if turn_context.features.enabled(Feature::CodexGitCommit)
-            && let Some(commit_message_instruction) = commit_message_trailer_instruction(
-                turn_context.config.commit_attribution.as_deref(),
-            )
+            || turn_context.config.public_contribution_mode
         {
-            developer_sections.push(commit_message_instruction);
+            developer_sections.extend(commit_publication_instructions(CommitPublicationConfig {
+                commit_attribution: turn_context.config.commit_attribution.as_deref(),
+                public_contribution_mode: turn_context.config.public_contribution_mode,
+            }));
         }
         if let Some(user_instructions) = turn_context.user_instructions.as_deref() {
             contextual_user_sections.push(

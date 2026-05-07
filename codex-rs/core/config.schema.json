@@ -4461,6 +4461,10 @@
       },
       "type": "object"
     },
+    "public_contribution_mode": {
+      "description": "When enabled, publication text such as commit messages, branch names, PR titles, and PR bodies should avoid AI attribution, internal tool names, private project names, model names, and generated-by text.",
+      "type": "boolean"
+    },
     "realtime": {
       "allOf": [
         {

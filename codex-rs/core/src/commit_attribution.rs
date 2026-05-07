@@ -1,5 +1,33 @@
 const DEFAULT_ATTRIBUTION_VALUE: &str = "Codex <noreply@openai.com>";
 
+const PUBLIC_CONTRIBUTION_INSTRUCTION: &str = r#"## PUBLIC CONTRIBUTION MODE
+
+You are preparing changes for a public or open-source repository.
+
+Commit messages, branch names, PR titles, and PR bodies must describe only the
+code change. Do not include AI attribution, internal tool names, private project
+names, model names, generated-by text, Co-authored-by trailers, or references to
+agentic workflows.
+
+Write publication text as a human developer would. If this conflicts with
+general attribution guidance, this public contribution mode controls publication
+surfaces."#;
+
+pub(crate) struct CommitPublicationConfig<'a> {
+    pub(crate) commit_attribution: Option<&'a str>,
+    pub(crate) public_contribution_mode: bool,
+}
+
+pub(crate) fn commit_publication_instructions(config: CommitPublicationConfig<'_>) -> Vec<String> {
+    if config.public_contribution_mode {
+        vec![PUBLIC_CONTRIBUTION_INSTRUCTION.to_string()]
+    } else {
+        commit_message_trailer_instruction(config.commit_attribution)
+            .into_iter()
+            .collect()
+    }
+}
+
 fn build_commit_message_trailer(config_attribution: Option<&str>) -> Option<String> {
     let value = resolve_attribution_value(config_attribution)?;
     Some(format!("Co-authored-by: {value}"))
