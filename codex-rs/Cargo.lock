@@ -402,7 +402,7 @@ checksum = "5f0e0fee31ef5ed1ba1316088939cea399010ed7731dba877ed44aeb407a75ea"
 
 [[package]]
 name = "app_test_support"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -1209,12 +1209,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "base16ct"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c7f02d4ea65f2c1853089ffd8d2787bdbc63de2f0d29dedbcf8ccdfa0ccd4cf"
-
-[[package]]
 name = "base64"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1778,7 +1772,7 @@ dependencies = [
 
 [[package]]
 name = "codex-agent-graph-store"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "async-trait",
  "codex-protocol",
@@ -1793,7 +1787,7 @@ dependencies = [
 
 [[package]]
 name = "codex-agent-identity"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -1812,7 +1806,7 @@ dependencies = [
 
 [[package]]
 name = "codex-analytics"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-app-server-protocol",
  "codex-git-utils",
@@ -1832,7 +1826,7 @@ dependencies = [
 
 [[package]]
 name = "codex-ansi-escape"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "ansi-to-tui",
  "ratatui",
@@ -1841,7 +1835,7 @@ dependencies = [
 
 [[package]]
 name = "codex-api"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -1875,7 +1869,7 @@ dependencies = [
 
 [[package]]
 name = "codex-app-server"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "app_test_support",
@@ -1956,7 +1950,7 @@ dependencies = [
 
 [[package]]
 name = "codex-app-server-client"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-app-server",
  "codex-app-server-protocol",
@@ -1981,7 +1975,7 @@ dependencies = [
 
 [[package]]
 name = "codex-app-server-protocol"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2008,7 +2002,7 @@ dependencies = [
 
 [[package]]
 name = "codex-app-server-test-client"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2029,7 +2023,7 @@ dependencies = [
 
 [[package]]
 name = "codex-app-server-transport"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -2068,7 +2062,7 @@ dependencies = [
 
 [[package]]
 name = "codex-apply-patch"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -2087,7 +2081,7 @@ dependencies = [
 
 [[package]]
 name = "codex-arg0"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "codex-apply-patch",
@@ -2104,7 +2098,7 @@ dependencies = [
 
 [[package]]
 name = "codex-async-utils"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "async-trait",
  "pretty_assertions",
@@ -2114,7 +2108,7 @@ dependencies = [
 
 [[package]]
 name = "codex-aws-auth"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "aws-config",
  "aws-credential-types",
@@ -2129,7 +2123,7 @@ dependencies = [
 
 [[package]]
 name = "codex-backend-client"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "codex-api",
@@ -2146,7 +2140,7 @@ dependencies = [
 
 [[package]]
 name = "codex-backend-openapi-models"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -2155,7 +2149,7 @@ dependencies = [
 
 [[package]]
 name = "codex-builtin-mcps"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "codex-memories-mcp",
@@ -2166,7 +2160,7 @@ dependencies = [
 
 [[package]]
 name = "codex-bwrap"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "cc",
  "libc",
@@ -2175,7 +2169,7 @@ dependencies = [
 
 [[package]]
 name = "codex-chatgpt"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2198,7 +2192,7 @@ dependencies = [
 
 [[package]]
 name = "codex-cli"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -2255,7 +2249,7 @@ dependencies = [
 
 [[package]]
 name = "codex-client"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "async-trait",
  "bytes",
@@ -2286,7 +2280,7 @@ dependencies = [
 
 [[package]]
 name = "codex-cloud-requirements"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -2311,7 +2305,7 @@ dependencies = [
 
 [[package]]
 name = "codex-cloud-tasks"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2343,7 +2337,7 @@ dependencies = [
 
 [[package]]
 name = "codex-cloud-tasks-client"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2358,7 +2352,7 @@ dependencies = [
 
 [[package]]
 name = "codex-cloud-tasks-mock-client"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -2368,7 +2362,7 @@ dependencies = [
 
 [[package]]
 name = "codex-code-mode"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -2385,11 +2379,11 @@ dependencies = [
 
 [[package]]
 name = "codex-collaboration-mode-templates"
-version = "0.0.0"
+version = "0.129.0"
 
 [[package]]
 name = "codex-config"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2435,7 +2429,7 @@ dependencies = [
 
 [[package]]
 name = "codex-connectors"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "codex-app-server-protocol",
@@ -2451,7 +2445,7 @@ dependencies = [
 
 [[package]]
 name = "codex-core"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -2571,7 +2565,7 @@ dependencies = [
 
 [[package]]
 name = "codex-core-api"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-analytics",
  "codex-app-server-protocol",
@@ -2589,7 +2583,7 @@ dependencies = [
 
 [[package]]
 name = "codex-core-plugins"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2627,7 +2621,7 @@ dependencies = [
 
 [[package]]
 name = "codex-core-skills"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "codex-analytics",
@@ -2658,7 +2652,7 @@ dependencies = [
 
 [[package]]
 name = "codex-debug-client"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2670,7 +2664,7 @@ dependencies = [
 
 [[package]]
 name = "codex-exec"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -2715,7 +2709,7 @@ dependencies = [
 
 [[package]]
 name = "codex-exec-server"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -2752,7 +2746,7 @@ dependencies = [
 
 [[package]]
 name = "codex-execpolicy"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2769,7 +2763,7 @@ dependencies = [
 
 [[package]]
 name = "codex-execpolicy-legacy"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "allocative",
  "anyhow",
@@ -2789,7 +2783,7 @@ dependencies = [
 
 [[package]]
 name = "codex-experimental-api-macros"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2798,7 +2792,7 @@ dependencies = [
 
 [[package]]
 name = "codex-external-agent-migration"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-hooks",
  "pretty_assertions",
@@ -2810,7 +2804,7 @@ dependencies = [
 
 [[package]]
 name = "codex-external-agent-sessions"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "chrono",
  "codex-app-server-protocol",
@@ -2824,7 +2818,7 @@ dependencies = [
 
 [[package]]
 name = "codex-features"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-otel",
  "codex-protocol",
@@ -2837,7 +2831,7 @@ dependencies = [
 
 [[package]]
 name = "codex-feedback"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "codex-login",
@@ -2850,7 +2844,7 @@ dependencies = [
 
 [[package]]
 name = "codex-file-search"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2866,7 +2860,7 @@ dependencies = [
 
 [[package]]
 name = "codex-file-system"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "async-trait",
  "codex-protocol",
@@ -2876,7 +2870,7 @@ dependencies = [
 
 [[package]]
 name = "codex-git-utils"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2900,7 +2894,7 @@ dependencies = [
 
 [[package]]
 name = "codex-hooks"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2923,7 +2917,7 @@ dependencies = [
 
 [[package]]
 name = "codex-install-context"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-utils-home-dir",
  "pretty_assertions",
@@ -2932,7 +2926,7 @@ dependencies = [
 
 [[package]]
 name = "codex-keyring-store"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "keyring",
  "tracing",
@@ -2940,7 +2934,7 @@ dependencies = [
 
 [[package]]
 name = "codex-linux-sandbox"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "clap",
  "codex-core",
@@ -2963,7 +2957,7 @@ dependencies = [
 
 [[package]]
 name = "codex-lmstudio"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-core",
  "codex-model-provider-info",
@@ -2977,7 +2971,7 @@ dependencies = [
 
 [[package]]
 name = "codex-login"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3019,7 +3013,7 @@ dependencies = [
 
 [[package]]
 name = "codex-mcp"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -3052,7 +3046,7 @@ dependencies = [
 
 [[package]]
 name = "codex-mcp-server"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "codex-arg0",
@@ -3083,7 +3077,7 @@ dependencies = [
 
 [[package]]
 name = "codex-memories-mcp"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "codex-utils-absolute-path",
@@ -3100,7 +3094,7 @@ dependencies = [
 
 [[package]]
 name = "codex-memories-read"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-protocol",
  "codex-shell-command",
@@ -3114,7 +3108,7 @@ dependencies = [
 
 [[package]]
 name = "codex-memories-write"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3149,7 +3143,7 @@ dependencies = [
 
 [[package]]
 name = "codex-message-history"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-config",
  "pretty_assertions",
@@ -3162,7 +3156,7 @@ dependencies = [
 
 [[package]]
 name = "codex-model-provider"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "async-trait",
  "codex-agent-identity",
@@ -3186,7 +3180,7 @@ dependencies = [
 
 [[package]]
 name = "codex-model-provider-info"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-api",
  "codex-app-server-protocol",
@@ -3203,7 +3197,7 @@ dependencies = [
 
 [[package]]
 name = "codex-models-manager"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -3224,7 +3218,7 @@ dependencies = [
 
 [[package]]
 name = "codex-network-proxy"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3255,7 +3249,7 @@ dependencies = [
 
 [[package]]
 name = "codex-ollama"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "assert_matches",
  "async-stream",
@@ -3274,7 +3268,7 @@ dependencies = [
 
 [[package]]
 name = "codex-otel"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "chrono",
  "codex-api",
@@ -3306,7 +3300,7 @@ dependencies = [
 
 [[package]]
 name = "codex-plugin"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-config",
  "codex-utils-absolute-path",
@@ -3316,7 +3310,7 @@ dependencies = [
 
 [[package]]
 name = "codex-process-hardening"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "libc",
  "pretty_assertions",
@@ -3324,7 +3318,7 @@ dependencies = [
 
 [[package]]
 name = "codex-protocol"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "chardetng",
@@ -3364,7 +3358,7 @@ dependencies = [
 
 [[package]]
 name = "codex-realtime-webrtc"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "libwebrtc",
  "thiserror 2.0.18",
@@ -3373,7 +3367,7 @@ dependencies = [
 
 [[package]]
 name = "codex-response-debug-context"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "base64 0.22.1",
  "codex-api",
@@ -3384,7 +3378,7 @@ dependencies = [
 
 [[package]]
 name = "codex-responses-api-proxy"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -3401,7 +3395,7 @@ dependencies = [
 
 [[package]]
 name = "codex-rmcp-client"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -3438,7 +3432,7 @@ dependencies = [
 
 [[package]]
 name = "codex-rollout"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3463,7 +3457,7 @@ dependencies = [
 
 [[package]]
 name = "codex-rollout-trace"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "codex-code-mode",
@@ -3478,7 +3472,7 @@ dependencies = [
 
 [[package]]
 name = "codex-sandboxing"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3499,7 +3493,7 @@ dependencies = [
 
 [[package]]
 name = "codex-secrets"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "age",
  "anyhow",
@@ -3520,7 +3514,7 @@ dependencies = [
 
 [[package]]
 name = "codex-shell-command"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -3540,7 +3534,7 @@ dependencies = [
 
 [[package]]
 name = "codex-shell-escalation"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3561,7 +3555,7 @@ dependencies = [
 
 [[package]]
 name = "codex-skills"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-utils-absolute-path",
  "include_dir",
@@ -3570,7 +3564,7 @@ dependencies = [
 
 [[package]]
 name = "codex-state"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3593,7 +3587,7 @@ dependencies = [
 
 [[package]]
 name = "codex-stdio-to-uds"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "codex-uds",
@@ -3605,7 +3599,7 @@ dependencies = [
 
 [[package]]
 name = "codex-terminal-detection"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "pretty_assertions",
  "tracing",
@@ -3613,7 +3607,7 @@ dependencies = [
 
 [[package]]
 name = "codex-test-binary-support"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-arg0",
  "tempfile",
@@ -3621,7 +3615,7 @@ dependencies = [
 
 [[package]]
 name = "codex-thread-manager-sample"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -3632,7 +3626,7 @@ dependencies = [
 
 [[package]]
 name = "codex-thread-store"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -3652,7 +3646,7 @@ dependencies = [
 
 [[package]]
 name = "codex-tools"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-app-server-protocol",
  "codex-code-mode",
@@ -3669,7 +3663,7 @@ dependencies = [
 
 [[package]]
 name = "codex-tui"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "arboard",
@@ -3776,7 +3770,7 @@ dependencies = [
 
 [[package]]
 name = "codex-uds"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "async-io",
  "pretty_assertions",
@@ -3788,7 +3782,7 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-absolute-path"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "dirs",
  "dunce",
@@ -3802,14 +3796,14 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-approval-presets"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-protocol",
 ]
 
 [[package]]
 name = "codex-utils-cache"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "lru 0.16.3",
  "sha1",
@@ -3818,7 +3812,7 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-cargo-bin"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "assert_cmd",
  "runfiles",
@@ -3827,7 +3821,7 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-cli"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "clap",
  "codex-protocol",
@@ -3838,15 +3832,15 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-elapsed"
-version = "0.0.0"
+version = "0.129.0"
 
 [[package]]
 name = "codex-utils-fuzzy-match"
-version = "0.0.0"
+version = "0.129.0"
 
 [[package]]
 name = "codex-utils-home-dir"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-utils-absolute-path",
  "dirs",
@@ -3856,7 +3850,7 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-image"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "base64 0.22.1",
  "codex-utils-cache",
@@ -3868,7 +3862,7 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-json-to-toml"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "pretty_assertions",
  "serde_json",
@@ -3877,7 +3871,7 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-oss"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-core",
  "codex-lmstudio",
@@ -3887,7 +3881,7 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-output-truncation"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-protocol",
  "codex-utils-string",
@@ -3896,7 +3890,7 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-path"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-utils-absolute-path",
  "dunce",
@@ -3906,7 +3900,7 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-plugins"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-exec-server",
  "codex-login",
@@ -3919,7 +3913,7 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-pty"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "filedescriptor",
@@ -3935,7 +3929,7 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-readiness"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "assert_matches",
  "async-trait",
@@ -3946,14 +3940,14 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-rustls-provider"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "rustls",
 ]
 
 [[package]]
 name = "codex-utils-sandbox-summary"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "codex-core",
  "codex-model-provider-info",
@@ -3964,7 +3958,7 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-sleep-inhibitor"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "core-foundation 0.9.4",
  "libc",
@@ -3974,14 +3968,14 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-stream-parser"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "pretty_assertions",
 ]
 
 [[package]]
 name = "codex-utils-string"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "pretty_assertions",
  "regex-lite",
@@ -3991,14 +3985,14 @@ dependencies = [
 
 [[package]]
 name = "codex-utils-template"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "pretty_assertions",
 ]
 
 [[package]]
 name = "codex-v8-poc"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "pretty_assertions",
  "v8",
@@ -4006,7 +4000,7 @@ dependencies = [
 
 [[package]]
 name = "codex-windows-sandbox"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4257,7 +4251,7 @@ dependencies = [
 
 [[package]]
 name = "core_test_support"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -4451,18 +4445,6 @@ name = "crunchy"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
-
-[[package]]
-name = "crypto-bigint"
-version = "0.5.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0dc92fb57ca44df6db8059111ab3af99a63d5d0f8375d9972e319a379c6bab76"
-dependencies = [
- "generic-array",
- "rand_core 0.6.4",
- "subtle",
- "zeroize",
-]
 
 [[package]]
 name = "crypto-common"
@@ -5178,20 +5160,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
-name = "ecdsa"
-version = "0.16.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee27f32b5c5292967d2d4a9d7f1e0b0aed2c15daded5a60300e4abb9d8020bca"
-dependencies = [
- "der",
- "digest",
- "elliptic-curve",
- "rfc6979",
- "signature",
- "spki",
-]
-
-[[package]]
 name = "ed25519"
 version = "2.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5222,26 +5190,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "elliptic-curve"
-version = "0.13.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5e6043086bf7973472e0c7dff2142ea0b680d30e18d9cc40f267efbf222bd47"
-dependencies = [
- "base16ct",
- "crypto-bigint",
- "digest",
- "ff",
- "generic-array",
- "group",
- "pem-rfc7468",
- "pkcs8",
- "rand_core 0.6.4",
- "sec1",
- "subtle",
- "zeroize",
 ]
 
 [[package]]
@@ -5495,16 +5443,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e6853b52649d4ac5c0bd02320cddc5ba956bdb407c4b75a2c6b75bf51500f8c"
 dependencies = [
  "simd-adler32",
-]
-
-[[package]]
-name = "ff"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0b50bfb653653f9ca9095b427bed08ab8d75a137839d9ad64eb11810d5b6393"
-dependencies = [
- "rand_core 0.6.4",
- "subtle",
 ]
 
 [[package]]
@@ -6899,17 +6837,6 @@ dependencies = [
  "glib-sys",
  "libc",
  "system-deps",
-]
-
-[[package]]
-name = "group"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0f9ef7462f7c099f518d754361858f86d8a07af53ba9af0fe635bbccb151a63"
-dependencies = [
- "ff",
- "rand_core 0.6.4",
- "subtle",
 ]
 
 [[package]]
@@ -8439,7 +8366,7 @@ dependencies = [
 
 [[package]]
 name = "mcp_test_support"
-version = "0.0.0"
+version = "0.129.0"
 dependencies = [
  "anyhow",
  "codex-login",
@@ -9412,18 +9339,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "p256"
-version = "0.13.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9863ad85fa8f4460f9c48cb909d38a0d689dba1f6f6988a5e3e0d31071bcd4b"
-dependencies = [
- "ecdsa",
- "elliptic-curve",
- "primeorder",
- "sha2",
-]
-
-[[package]]
 name = "parking"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9850,15 +9765,6 @@ checksum = "479ca8adacdd7ce8f1fb39ce9ecccbfe93a3f1344b3d0d97f20bc0196208f62b"
 dependencies = [
  "proc-macro2",
  "syn 2.0.114",
-]
-
-[[package]]
-name = "primeorder"
-version = "0.13.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "353e1ca18966c16d9deb1c69278edbc5f194139612772bd9537af60ac231e1e6"
-dependencies = [
- "elliptic-curve",
 ]
 
 [[package]]
@@ -10812,16 +10718,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e061d1b48cb8d38042de4ae0a7a6401009d6143dc80d2e2d6f31f0bdd6470c7"
 
 [[package]]
-name = "rfc6979"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8dd2a808d456c4a54e300a23e9f5a67e122c3024119acbfd73e3bf664491cb2"
-dependencies = [
- "hmac",
- "subtle",
-]
-
-[[package]]
 name = "ring"
 version = "0.17.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11279,20 +11175,6 @@ name = "sdd"
 version = "3.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "490dcfcbfef26be6800d11870ff2df8774fa6e86d047e3e8c8a76b25655e41ca"
-
-[[package]]
-name = "sec1"
-version = "0.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3e97a565f76233a6003f9f5c54be1d9c5bdfa3eccfb189469f11ec4901c47dc"
-dependencies = [
- "base16ct",
- "der",
- "generic-array",
- "pkcs8",
- "subtle",
- "zeroize",
-]
 
 [[package]]
 name = "seccompiler"
