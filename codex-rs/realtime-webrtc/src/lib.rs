@@ -1,4 +1,4 @@
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", feature = "native"))]
 mod native;
 
 use std::fmt;
@@ -12,6 +12,8 @@ pub enum RealtimeWebrtcError {
     Message(String),
     #[error("realtime WebRTC is not supported on this platform")]
     UnsupportedPlatform,
+    #[error("realtime WebRTC native support is not compiled into this build")]
+    NotCompiledIn,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,7 +33,7 @@ pub struct StartedRealtimeWebrtcSession {
 }
 
 pub struct RealtimeWebrtcSessionHandle {
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", feature = "native"))]
     inner: native::SessionHandle,
     local_audio_peak: Arc<AtomicU16>,
 }
@@ -45,9 +47,14 @@ impl fmt::Debug for RealtimeWebrtcSessionHandle {
 
 impl RealtimeWebrtcSessionHandle {
     pub fn apply_answer_sdp(&self, answer_sdp: String) -> Result<()> {
-        #[cfg(target_os = "macos")]
+        #[cfg(all(target_os = "macos", feature = "native"))]
         {
             self.inner.apply_answer_sdp(answer_sdp)
+        }
+        #[cfg(all(target_os = "macos", not(feature = "native")))]
+        {
+            let _ = answer_sdp;
+            Err(RealtimeWebrtcError::NotCompiledIn)
         }
         #[cfg(not(target_os = "macos"))]
         {
@@ -57,7 +64,7 @@ impl RealtimeWebrtcSessionHandle {
     }
 
     pub fn close(&self) {
-        #[cfg(target_os = "macos")]
+        #[cfg(all(target_os = "macos", feature = "native"))]
         self.inner.close();
     }
 
@@ -70,7 +77,7 @@ pub struct RealtimeWebrtcSession;
 
 impl RealtimeWebrtcSession {
     pub fn start() -> Result<StartedRealtimeWebrtcSession> {
-        #[cfg(target_os = "macos")]
+        #[cfg(all(target_os = "macos", feature = "native"))]
         {
             let started = native::start()?;
             Ok(StartedRealtimeWebrtcSession {
@@ -81,6 +88,10 @@ impl RealtimeWebrtcSession {
                 },
                 events: started.events,
             })
+        }
+        #[cfg(all(target_os = "macos", not(feature = "native")))]
+        {
+            Err(RealtimeWebrtcError::NotCompiledIn)
         }
         #[cfg(not(target_os = "macos"))]
         {

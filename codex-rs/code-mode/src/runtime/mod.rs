@@ -1,27 +1,39 @@
+#[cfg(feature = "runtime")]
 mod callbacks;
+#[cfg(feature = "runtime")]
 mod globals;
+#[cfg(feature = "runtime")]
 mod module_loader;
+#[cfg(feature = "runtime")]
 mod timers;
+#[cfg(feature = "runtime")]
 mod value;
 
 use std::collections::HashMap;
+#[cfg(feature = "runtime")]
 use std::sync::OnceLock;
+#[cfg(feature = "runtime")]
 use std::sync::mpsc as std_mpsc;
+#[cfg(feature = "runtime")]
 use std::thread;
 
 use codex_protocol::ToolName;
 use serde::Serialize;
 use serde_json::Value as JsonValue;
+#[cfg(feature = "runtime")]
 use tokio::sync::mpsc;
 
+#[cfg(feature = "runtime")]
 use crate::description::EnabledToolMetadata;
 use crate::description::ToolDefinition;
+#[cfg(feature = "runtime")]
 use crate::description::enabled_tool_metadata;
 use crate::response::FunctionCallOutputContentItem;
 
 pub const DEFAULT_EXEC_YIELD_TIME_MS: u64 = 10_000;
 pub const DEFAULT_WAIT_YIELD_TIME_MS: u64 = 10_000;
 pub const DEFAULT_MAX_OUTPUT_TOKENS_PER_EXEC_CALL: usize = 10_000;
+#[cfg(feature = "runtime")]
 const EXIT_SENTINEL: &str = "__codex_code_mode_exit__";
 
 #[derive(Clone, Debug)]
@@ -100,6 +112,7 @@ pub struct CodeModeNestedToolCall {
     pub input: Option<JsonValue>,
 }
 
+#[cfg(feature = "runtime")]
 #[derive(Debug)]
 pub(crate) enum TurnMessage {
     ToolCall(CodeModeNestedToolCall),
@@ -110,6 +123,7 @@ pub(crate) enum TurnMessage {
     },
 }
 
+#[cfg(feature = "runtime")]
 #[derive(Debug)]
 pub(crate) enum RuntimeCommand {
     ToolResponse { id: String, result: JsonValue },
@@ -118,6 +132,7 @@ pub(crate) enum RuntimeCommand {
     Terminate,
 }
 
+#[cfg(feature = "runtime")]
 #[derive(Debug)]
 pub(crate) enum RuntimeEvent {
     Started,
@@ -138,6 +153,7 @@ pub(crate) enum RuntimeEvent {
     },
 }
 
+#[cfg(feature = "runtime")]
 pub(crate) fn spawn_runtime(
     request: ExecuteRequest,
     event_tx: mpsc::UnboundedSender<RuntimeEvent>,
@@ -176,6 +192,7 @@ pub(crate) fn spawn_runtime(
 }
 
 #[derive(Clone)]
+#[cfg(feature = "runtime")]
 struct RuntimeConfig {
     tool_call_id: String,
     enabled_tools: Vec<EnabledToolMetadata>,
@@ -183,6 +200,7 @@ struct RuntimeConfig {
     stored_values: HashMap<String, JsonValue>,
 }
 
+#[cfg(feature = "runtime")]
 pub(super) struct RuntimeState {
     event_tx: mpsc::UnboundedSender<RuntimeEvent>,
     pending_tool_calls: HashMap<String, v8::Global<v8::PromiseResolver>>,
@@ -196,6 +214,7 @@ pub(super) struct RuntimeState {
     exit_requested: bool,
 }
 
+#[cfg(feature = "runtime")]
 pub(super) enum CompletionState {
     Pending,
     Completed {
@@ -204,6 +223,7 @@ pub(super) enum CompletionState {
     },
 }
 
+#[cfg(feature = "runtime")]
 fn initialize_v8() -> Result<(), String> {
     static PLATFORM: OnceLock<Result<v8::SharedRef<v8::Platform>, String>> = OnceLock::new();
 
@@ -220,6 +240,7 @@ fn initialize_v8() -> Result<(), String> {
     }
 }
 
+#[cfg(feature = "runtime")]
 fn run_runtime(
     config: RuntimeConfig,
     event_tx: mpsc::UnboundedSender<RuntimeEvent>,
@@ -278,11 +299,7 @@ fn run_runtime(
     }
 
     let mut pending_promise = pending_promise;
-    loop {
-        let Ok(command) = command_rx.recv() else {
-            break;
-        };
-
+    while let Ok(command) = command_rx.recv() {
         match command {
             RuntimeCommand::Terminate => break,
             RuntimeCommand::ToolResponse { id, result } => {
@@ -330,6 +347,7 @@ fn run_runtime(
     }
 }
 
+#[cfg(feature = "runtime")]
 fn capture_scope_send_error(
     scope: &mut v8::PinScope<'_, '_>,
     event_tx: &mpsc::UnboundedSender<RuntimeEvent>,
@@ -343,6 +361,7 @@ fn capture_scope_send_error(
     send_result(event_tx, stored_values, error_text);
 }
 
+#[cfg(feature = "runtime")]
 fn send_result(
     event_tx: &mpsc::UnboundedSender<RuntimeEvent>,
     stored_values: HashMap<String, JsonValue>,
@@ -354,7 +373,7 @@ fn send_result(
     });
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "runtime"))]
 mod tests {
     use std::collections::HashMap;
     use std::time::Duration;
