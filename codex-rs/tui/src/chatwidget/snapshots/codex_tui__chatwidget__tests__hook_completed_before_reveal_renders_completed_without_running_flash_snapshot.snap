@@ -6,5 +6,4 @@ started hidden:
 
 history:
 • SessionStart hook (completed)
-  hook context: session context
-    second line
+  hook context: injected 27 bytes across 2 lines
