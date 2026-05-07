@@ -880,7 +880,11 @@ pub enum ResponseItem {
         result: String,
     },
     #[serde(alias = "compaction_summary")]
-    Compaction { encrypted_content: String },
+    Compaction {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        encrypted_content: Option<String>,
+    },
     ContextCompaction {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[ts(optional)]
@@ -2402,7 +2406,7 @@ mod tests {
         assert_eq!(
             item,
             ResponseItem::Compaction {
-                encrypted_content: "abc".into(),
+                encrypted_content: Some("abc".into()),
             }
         );
         Ok(())
@@ -2424,15 +2428,15 @@ mod tests {
     }
 
     #[test]
-    fn serializes_context_compaction_trigger_without_payload() -> Result<()> {
-        let item = ResponseItem::ContextCompaction {
+    fn serializes_compaction_trigger_without_payload() -> Result<()> {
+        let item = ResponseItem::Compaction {
             encrypted_content: None,
         };
 
         assert_eq!(
             serde_json::to_value(item)?,
             serde_json::json!({
-                "type": "context_compaction",
+                "type": "compaction",
             })
         );
         Ok(())

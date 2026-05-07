@@ -165,7 +165,7 @@ async fn run_remote_compact_task_inner_impl(
     )
     .await?;
     let mut input = prompt_input.clone();
-    input.push(ResponseItem::ContextCompaction {
+    input.push(ResponseItem::Compaction {
         encrypted_content: None,
     });
     let prompt = Prompt {
@@ -292,18 +292,33 @@ async fn collect_context_compaction_output(
                 output_item_count += 1;
                 match item {
                     ResponseItem::ContextCompaction {
-                        encrypted_content: Some(_),
+                        encrypted_content: Some(encrypted_content),
                     } => {
                         context_compaction_count += 1;
                         if context_compaction_output.is_none() {
-                            context_compaction_output = Some(item);
+                            context_compaction_output = Some(ResponseItem::Compaction {
+                                encrypted_content: Some(encrypted_content),
+                            });
                         }
                     }
-                    ResponseItem::ContextCompaction {
+                    ResponseItem::Compaction {
+                        encrypted_content: Some(encrypted_content),
+                    } => {
+                        context_compaction_count += 1;
+                        if context_compaction_output.is_none() {
+                            context_compaction_output = Some(ResponseItem::Compaction {
+                                encrypted_content: Some(encrypted_content),
+                            });
+                        }
+                    }
+                    ResponseItem::Compaction {
+                        encrypted_content: None,
+                    }
+                    | ResponseItem::ContextCompaction {
                         encrypted_content: None,
                     } => {
                         return Err(CodexErr::Fatal(
-                            "remote compaction v2 returned context_compaction without encrypted_content"
+                            "remote compaction v2 returned compaction without encrypted_content"
                                 .to_string(),
                         ));
                     }
@@ -326,7 +341,7 @@ async fn collect_context_compaction_output(
 
     if context_compaction_count != 1 {
         return Err(CodexErr::Fatal(format!(
-            "remote compaction v2 expected exactly one context_compaction output item, got {context_compaction_count} from {output_item_count} output items"
+            "remote compaction v2 expected exactly one compaction output item, got {context_compaction_count} from {output_item_count} output items"
         )));
     }
 
@@ -407,10 +422,10 @@ mod tests {
                 call_id: "call_1".to_string(),
             },
             ResponseItem::Compaction {
-                encrypted_content: "old".to_string(),
+                encrypted_content: Some("old".to_string()),
             },
         ];
-        let output = ResponseItem::ContextCompaction {
+        let output = ResponseItem::Compaction {
             encrypted_content: Some("new".to_string()),
         };
 
@@ -429,7 +444,7 @@ mod tests {
 
     #[tokio::test]
     async fn collect_context_compaction_output_accepts_additional_output_items() {
-        let context_compaction = ResponseItem::ContextCompaction {
+        let context_compaction = ResponseItem::Compaction {
             encrypted_content: Some("encrypted".to_string()),
         };
         let stream = response_stream(vec![
@@ -452,5 +467,28 @@ mod tests {
 
         assert_eq!(output, context_compaction);
         assert_eq!(response_id, "resp-compact");
+    }
+
+    #[tokio::test]
+    async fn collect_context_compaction_output_accepts_compaction_output_item() {
+        let context_compaction = ResponseItem::Compaction {
+            encrypted_content: Some("encrypted".to_string()),
+        };
+        let stream = response_stream(vec![
+            Ok(ResponseEvent::OutputItemDone(ResponseItem::Compaction {
+                encrypted_content: Some("encrypted".to_string()),
+            })),
+            Ok(ResponseEvent::Completed {
+                response_id: "resp-compact".to_string(),
+                token_usage: None,
+                end_turn: Some(true),
+            }),
+        ]);
+
+        let output = collect_context_compaction_output(stream)
+            .await
+            .expect("compaction output should be collected");
+
+        assert_eq!(output, context_compaction);
     }
 }

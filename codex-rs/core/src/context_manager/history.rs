@@ -536,7 +536,7 @@ pub(crate) fn estimate_response_item_model_visible_bytes(item: &ResponseItem) ->
             ..
         }
         | ResponseItem::Compaction {
-            encrypted_content: content,
+            encrypted_content: Some(content),
         }
         | ResponseItem::ContextCompaction {
             encrypted_content: Some(content),

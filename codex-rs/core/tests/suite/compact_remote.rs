@@ -150,7 +150,7 @@ fn format_labeled_requests_snapshot(
 
 fn compacted_summary_only_output(summary: &str) -> Vec<ResponseItem> {
     vec![ResponseItem::Compaction {
-        encrypted_content: summary_with_prefix(summary),
+        encrypted_content: Some(summary_with_prefix(summary)),
     }]
 }
 
@@ -309,7 +309,7 @@ async fn remote_compact_replaces_history_for_followups() -> Result<()> {
     .await;
 
     let compacted_history = vec![ResponseItem::Compaction {
-        encrypted_content: "ENCRYPTED_COMPACTION_SUMMARY".to_string(),
+        encrypted_content: Some("ENCRYPTED_COMPACTION_SUMMARY".to_string()),
     }];
     let compact_mock = responses::mount_compact_json_once(
         harness.server(),
@@ -698,7 +698,7 @@ async fn remote_manual_compact_chatgpt_auth_reuses_service_tier_and_prompt_cache
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn remote_compact_v2_reuses_context_compaction_for_followups() -> Result<()> {
+async fn remote_compact_v2_reuses_compaction_for_followups() -> Result<()> {
     skip_if_no_network!(Ok(()));
 
     let harness = TestCodexHarness::with_builder(
@@ -722,7 +722,7 @@ async fn remote_compact_v2_reuses_context_compaction_for_followups() -> Result<(
                 serde_json::json!({
                     "type": "response.output_item.done",
                     "item": {
-                        "type": "context_compaction",
+                        "type": "compaction",
                         "encrypted_content": "ENCRYPTED_CONTEXT_COMPACTION_SUMMARY",
                     }
                 }),
@@ -779,8 +779,12 @@ async fn remote_compact_v2_reuses_context_compaction_for_followups() -> Result<(
     assert_eq!(compact_request.path(), "/v1/responses");
     let compact_body = compact_request.body_json().to_string();
     assert!(
-        compact_body.contains("\"type\":\"context_compaction\""),
-        "expected v2 compaction request to include the context_compaction trigger item"
+        compact_body.contains("\"type\":\"compaction\""),
+        "expected v2 compaction request to include the compaction trigger item"
+    );
+    assert!(
+        !compact_body.contains("\"type\":\"context_compaction\""),
+        "expected v2 compaction request to use the API-supported compaction item"
     );
     assert!(
         !compact_body.contains("ENCRYPTED_CONTEXT_COMPACTION_SUMMARY"),
@@ -790,8 +794,12 @@ async fn remote_compact_v2_reuses_context_compaction_for_followups() -> Result<(
     let follow_up_request = response_requests.last().expect("follow-up request missing");
     let follow_up_body = follow_up_request.body_json().to_string();
     assert!(
-        follow_up_body.contains("\"type\":\"context_compaction\""),
-        "expected follow-up request to preserve the v2 context_compaction item"
+        follow_up_body.contains("\"type\":\"compaction\""),
+        "expected follow-up request to preserve the v2 compaction item"
+    );
+    assert!(
+        !follow_up_body.contains("\"type\":\"context_compaction\""),
+        "expected follow-up request to use the API-supported compaction item"
     );
     assert!(
         follow_up_body.contains("ENCRYPTED_CONTEXT_COMPACTION_SUMMARY"),
@@ -806,8 +814,7 @@ async fn remote_compact_v2_reuses_context_compaction_for_followups() -> Result<(
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn remote_compact_v2_accepts_additional_output_items_before_context_compaction() -> Result<()>
-{
+async fn remote_compact_v2_accepts_additional_output_items_before_compaction() -> Result<()> {
     skip_if_no_network!(Ok(()));
 
     let harness = TestCodexHarness::with_builder(
@@ -832,7 +839,7 @@ async fn remote_compact_v2_accepts_additional_output_items_before_context_compac
                 serde_json::json!({
                     "type": "response.output_item.done",
                     "item": {
-                        "type": "context_compaction",
+                        "type": "compaction",
                         "encrypted_content": "ENCRYPTED_CONTEXT_COMPACTION_SUMMARY",
                     }
                 }),
@@ -879,8 +886,12 @@ async fn remote_compact_v2_accepts_additional_output_items_before_context_compac
     let follow_up_request = response_requests.last().expect("follow-up request missing");
     let follow_up_body = follow_up_request.body_json().to_string();
     assert!(
-        follow_up_body.contains("\"type\":\"context_compaction\""),
-        "expected follow-up request to preserve the v2 context_compaction item"
+        follow_up_body.contains("\"type\":\"compaction\""),
+        "expected follow-up request to preserve the v2 compaction item"
+    );
+    assert!(
+        !follow_up_body.contains("\"type\":\"context_compaction\""),
+        "expected follow-up request to use the API-supported compaction item"
     );
     assert!(
         follow_up_body.contains("ENCRYPTED_CONTEXT_COMPACTION_SUMMARY"),
@@ -1808,7 +1819,7 @@ async fn remote_compact_persists_replacement_history_in_rollout() -> Result<()> 
 
     let compacted_history = vec![
         ResponseItem::Compaction {
-            encrypted_content: "ENCRYPTED_COMPACTION_SUMMARY".to_string(),
+            encrypted_content: Some("ENCRYPTED_COMPACTION_SUMMARY".to_string()),
         },
         ResponseItem::Message {
             id: None,
@@ -1865,7 +1876,7 @@ async fn remote_compact_persists_replacement_history_in_rollout() -> Result<()> 
                 matches!(
                     item,
                     ResponseItem::Compaction { encrypted_content }
-                        if encrypted_content == "ENCRYPTED_COMPACTION_SUMMARY"
+                        if encrypted_content.as_deref() == Some("ENCRYPTED_COMPACTION_SUMMARY")
                 )
             });
             let has_compacted_assistant_note = replacement_history.iter().any(|item| {
@@ -1957,7 +1968,7 @@ async fn remote_compact_and_resume_refresh_stale_developer_instructions() -> Res
             phase: None,
         },
         ResponseItem::Compaction {
-            encrypted_content: "ENCRYPTED_COMPACTION_SUMMARY".to_string(),
+            encrypted_content: Some("ENCRYPTED_COMPACTION_SUMMARY".to_string()),
         },
     ];
     let compact_mock = responses::mount_compact_json_once(
@@ -2094,7 +2105,7 @@ async fn remote_compact_refreshes_stale_developer_instructions_without_resume() 
             phase: None,
         },
         ResponseItem::Compaction {
-            encrypted_content: "ENCRYPTED_COMPACTION_SUMMARY".to_string(),
+            encrypted_content: Some("ENCRYPTED_COMPACTION_SUMMARY".to_string()),
         },
     ];
     let compact_mock = responses::mount_compact_json_once(
@@ -3145,7 +3156,7 @@ async fn snapshot_request_shape_remote_mid_turn_compaction_summary_only_reinject
     .await;
 
     let compacted_history = vec![ResponseItem::Compaction {
-        encrypted_content: summary_with_prefix("REMOTE_SUMMARY_ONLY"),
+        encrypted_content: Some(summary_with_prefix("REMOTE_SUMMARY_ONLY")),
     }];
     let compact_mock = responses::mount_compact_json_once(
         harness.server(),
