@@ -758,7 +758,10 @@ pub(super) async fn read_response_and_notification_for_method(
             JSONRPCMessage::Response(candidate) if candidate.id == target_id => {
                 response = Some(candidate);
             }
-            JSONRPCMessage::Notification(candidate) if candidate.method == method => {
+            JSONRPCMessage::Notification(candidate) => {
+                if candidate.method != method {
+                    continue;
+                }
                 if notification.replace(candidate).is_some() {
                     bail!(
                         "received duplicate notification for method `{method}` before completing paired read"
