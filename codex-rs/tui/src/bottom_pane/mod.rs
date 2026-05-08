@@ -1605,7 +1605,7 @@ impl BottomPane {
     }
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
 impl BottomPane {
     pub(crate) fn insert_recording_meter_placeholder(&mut self, text: &str) -> String {
         let id = self.composer.insert_recording_meter_placeholder(text);

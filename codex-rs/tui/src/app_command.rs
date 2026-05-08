@@ -6,6 +6,7 @@ use codex_app_server_protocol::FileChangeApprovalDecision;
 use codex_app_server_protocol::McpServerElicitationAction;
 use codex_app_server_protocol::RequestId as AppServerRequestId;
 use codex_app_server_protocol::ReviewTarget;
+#[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
 use codex_app_server_protocol::ThreadRealtimeAudioChunk;
 use codex_app_server_protocol::ThreadRealtimeStartTransport;
 use codex_app_server_protocol::ToolRequestUserInputResponse;
@@ -31,6 +32,7 @@ pub(crate) enum AppCommand {
         transport: Option<ThreadRealtimeStartTransport>,
         voice: Option<Value>,
     },
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     RealtimeConversationAudio(ThreadRealtimeAudioChunk),
     RealtimeConversationClose,
     RunUserShellCommand {
@@ -124,7 +126,7 @@ impl AppCommand {
         Self::RealtimeConversationStart { transport, voice }
     }
 
-    #[cfg_attr(target_os = "linux", allow(dead_code))]
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     pub(crate) fn realtime_conversation_audio(frame: ThreadRealtimeAudioChunk) -> Self {
         Self::RealtimeConversationAudio(frame)
     }

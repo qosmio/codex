@@ -195,6 +195,27 @@ async fn submit_user_message_as_plain_user_turn_does_not_run_shell_commands() {
 }
 
 #[tokio::test]
+async fn submit_user_message_as_plain_user_turn_does_not_run_status_command() {
+    let (mut chat, _rx, mut op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
+    chat.thread_id = Some(ThreadId::new());
+
+    chat.submit_user_message_as_plain_user_turn("status".into());
+
+    match next_submit_op(&mut op_rx) {
+        Op::UserTurn { items, .. } => assert_eq!(
+            items,
+            vec![UserInput::Text {
+                text: "status".to_string(),
+                text_elements: Vec::new(),
+            }]
+        ),
+        other => {
+            panic!("expected Op::UserTurn for side-conversation status input, got {other:?}")
+        }
+    }
+}
+
+#[tokio::test]
 async fn slash_side_without_args_starts_empty_side_conversation() {
     let (mut chat, mut rx, mut op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
     let parent_thread_id = ThreadId::new();

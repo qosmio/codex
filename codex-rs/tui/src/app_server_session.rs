@@ -71,8 +71,11 @@ use codex_app_server_protocol::ThreadMemoryModeSetParams;
 use codex_app_server_protocol::ThreadMemoryModeSetResponse;
 use codex_app_server_protocol::ThreadReadParams;
 use codex_app_server_protocol::ThreadReadResponse;
+#[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
 use codex_app_server_protocol::ThreadRealtimeAppendAudioParams;
+#[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
 use codex_app_server_protocol::ThreadRealtimeAppendAudioResponse;
+#[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
 use codex_app_server_protocol::ThreadRealtimeAudioChunk;
 use codex_app_server_protocol::ThreadRealtimeStartParams;
 use codex_app_server_protocol::ThreadRealtimeStartResponse;
@@ -903,6 +906,7 @@ impl AppServerSession {
         Ok(())
     }
 
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     pub(crate) async fn thread_realtime_audio(
         &mut self,
         thread_id: ThreadId,

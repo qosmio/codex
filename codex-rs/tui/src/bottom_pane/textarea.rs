@@ -1422,6 +1422,7 @@ impl TextArea {
     }
 
     #[cfg(not(target_os = "linux"))]
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     pub fn insert_named_element(&mut self, text: &str, id: String) {
         let start = self.clamp_pos_for_insertion(self.cursor_pos);
         self.insert_str_at(start, text);
@@ -1432,6 +1433,7 @@ impl TextArea {
     }
 
     #[cfg(not(target_os = "linux"))]
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     pub fn replace_element_by_id(&mut self, id: &str, text: &str) -> bool {
         if let Some(idx) = self
             .elements

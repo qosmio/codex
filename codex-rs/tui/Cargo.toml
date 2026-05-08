@@ -23,7 +23,8 @@ workspace = true
 
 [features]
 default = []
-realtime-webrtc = ["codex-realtime-webrtc/native"]
+realtime-audio = ["dep:cpal"]
+realtime-webrtc = ["realtime-audio", "codex-realtime-webrtc/native"]
 
 [dependencies]
 anyhow = { workspace = true }
@@ -128,7 +129,7 @@ codex-windows-sandbox = { workspace = true }
 tokio-util = { workspace = true, features = ["time"] }
 
 [target.'cfg(not(target_os = "linux"))'.dependencies]
-cpal = "0.15"
+cpal = { version = "0.15", optional = true }
 
 [target.'cfg(unix)'.dependencies]
 libc = { workspace = true }

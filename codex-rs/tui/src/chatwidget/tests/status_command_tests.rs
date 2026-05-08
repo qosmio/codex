@@ -77,6 +77,19 @@ async fn status_command_renders_immediately_without_rate_limit_refresh() {
 }
 
 #[tokio::test]
+async fn status_command_fragments_submit_locally_without_user_turn() {
+    for fragment in ["status", "tatus$", "atus", "tus", "us", "s"] {
+        let (mut chat, mut rx, mut op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
+        chat.thread_id = Some(ThreadId::new());
+
+        chat.submit_user_message(UserMessage::from(fragment));
+
+        assert_matches!(rx.try_recv(), Ok(AppEvent::InsertHistoryCell(_)));
+        assert_no_submit_op(&mut op_rx);
+    }
+}
+
+#[tokio::test]
 async fn status_command_uses_catalog_default_reasoning_when_config_empty() {
     let (mut chat, mut rx, _op_rx) = make_chatwidget_manual(Some("gpt-5.4")).await;
     chat.config.model_reasoning_effort = None;

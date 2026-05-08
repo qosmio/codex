@@ -85,9 +85,9 @@ mod app_server_approval_conversions;
 mod app_server_session;
 mod approval_events;
 mod ascii_animation;
-#[cfg(not(target_os = "linux"))]
+#[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
 mod audio_device;
-#[cfg(target_os = "linux")]
+#[cfg(not(all(not(target_os = "linux"), feature = "realtime-audio")))]
 #[allow(dead_code)]
 mod audio_device {
     use crate::app_event::RealtimeAudioDeviceKind;
@@ -163,6 +163,7 @@ mod shimmer;
 mod skills_helpers;
 mod slash_command;
 mod status;
+mod status_command_fragments;
 mod status_indicator_widget;
 mod streaming;
 mod style;
@@ -185,11 +186,11 @@ mod update_prompt;
 mod update_versions;
 mod updates;
 mod version;
-#[cfg(not(target_os = "linux"))]
+#[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
 mod voice;
 mod width;
 mod workspace_command;
-#[cfg(target_os = "linux")]
+#[cfg(not(all(not(target_os = "linux"), feature = "realtime-audio")))]
 #[allow(dead_code)]
 mod voice {
     use crate::app_event_sender::AppEventSender;

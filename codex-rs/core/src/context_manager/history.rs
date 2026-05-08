@@ -488,9 +488,8 @@ fn is_api_message(message: &ResponseItem) -> bool {
         | ResponseItem::Reasoning { .. }
         | ResponseItem::WebSearchCall { .. }
         | ResponseItem::ImageGenerationCall { .. }
-        | ResponseItem::Compaction { .. }
-        | ResponseItem::ContextCompaction { .. } => true,
-        ResponseItem::Other => false,
+        | ResponseItem::Compaction { .. } => true,
+        ResponseItem::ContextCompaction { .. } | ResponseItem::Other => false,
     }
 }
 
@@ -536,7 +535,7 @@ pub(crate) fn estimate_response_item_model_visible_bytes(item: &ResponseItem) ->
             ..
         }
         | ResponseItem::Compaction {
-            encrypted_content: Some(content),
+            encrypted_content: content,
         }
         | ResponseItem::ContextCompaction {
             encrypted_content: Some(content),

@@ -665,6 +665,7 @@ impl App {
                     .await?;
                 Ok(true)
             }
+            #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
             AppCommand::RealtimeConversationAudio(frame) => {
                 app_server
                     .thread_realtime_audio(thread_id, frame.clone())

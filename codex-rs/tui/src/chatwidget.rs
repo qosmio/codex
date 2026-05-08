@@ -49,7 +49,7 @@ use crate::app_event::RealtimeAudioDeviceKind;
 use crate::app_server_approval_conversions::file_update_changes_to_display;
 use crate::approval_events::ApplyPatchApprovalRequestEvent;
 use crate::approval_events::ExecApprovalRequestEvent;
-#[cfg(not(target_os = "linux"))]
+#[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
 use crate::audio_device::list_realtime_audio_device_names;
 use crate::bottom_pane::StatusLineItem;
 use crate::bottom_pane::StatusLineSetupView;
@@ -1699,7 +1699,7 @@ impl ChatWidget {
 
     fn realtime_conversation_enabled(&self) -> bool {
         self.config.features.enabled(Feature::RealtimeConversation)
-            && cfg!(not(target_os = "linux"))
+            && cfg!(all(not(target_os = "linux"), feature = "realtime-audio"))
     }
 
     fn realtime_audio_device_selection_enabled(&self) -> bool {
@@ -5692,6 +5692,16 @@ impl ChatWidget {
             );
             return (false, None);
         }
+        if shell_escape_policy == ShellEscapePolicy::Allow
+            && crate::status_command_fragments::is_status_command_fragment(&user_message.text)
+            && user_message.local_images.is_empty()
+            && user_message.remote_image_urls.is_empty()
+            && user_message.text_elements.is_empty()
+            && user_message.mention_bindings.is_empty()
+        {
+            self.dispatch_command(SlashCommand::Status);
+            return (true, None);
+        }
         let UserMessage {
             text,
             local_images,
@@ -7555,7 +7565,7 @@ impl ChatWidget {
         });
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     pub(crate) fn open_realtime_audio_device_selection(&mut self, kind: RealtimeAudioDeviceKind) {
         match list_realtime_audio_device_names(kind) {
             Ok(device_names) => {
@@ -7570,12 +7580,12 @@ impl ChatWidget {
         }
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(not(all(not(target_os = "linux"), feature = "realtime-audio")))]
     pub(crate) fn open_realtime_audio_device_selection(&mut self, kind: RealtimeAudioDeviceKind) {
         let _ = kind;
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     fn open_realtime_audio_device_selection_with_names(
         &mut self,
         kind: RealtimeAudioDeviceKind,
@@ -7640,6 +7650,7 @@ impl ChatWidget {
         });
     }
 
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     pub(crate) fn open_realtime_audio_restart_prompt(&mut self, kind: RealtimeAudioDeviceKind) {
         let restart_actions: Vec<SelectionAction> = vec![Box::new(move |tx| {
             tx.send(AppEvent::RestartRealtimeAudioDevice { kind });
@@ -9348,6 +9359,27 @@ impl ChatWidget {
             .set_connectors_enabled(self.connectors_enabled());
     }
 
+    pub(crate) fn should_show_fast_status(
+        &self,
+        model: &str,
+        service_tier: Option<ServiceTier>,
+    ) -> bool {
+        self.model_supports_fast_mode(model)
+            && matches!(service_tier, Some(ServiceTier::Fast))
+            && self.has_chatgpt_account
+    }
+
+    fn fast_mode_enabled(&self) -> bool {
+        self.config.features.enabled(Feature::FastMode)
+    }
+
+    pub(crate) fn can_toggle_fast_mode_from_keybinding(&self) -> bool {
+        self.fast_mode_enabled()
+            && !self.is_user_turn_pending_or_running()
+            && self.bottom_pane.no_modal_or_popup_active()
+    }
+
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     pub(crate) fn set_realtime_audio_device(
         &mut self,
         kind: RealtimeAudioDeviceKind,
@@ -9389,6 +9421,7 @@ impl ChatWidget {
             .unwrap_or_else(|| self.current_collaboration_mode.model())
     }
 
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     pub(crate) fn realtime_conversation_is_live(&self) -> bool {
         self.realtime_conversation.is_live()
     }
@@ -10900,7 +10933,7 @@ impl ChatWidget {
     }
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
 impl ChatWidget {
     pub(crate) fn update_recording_meter_in_place(&mut self, id: &str, text: &str) -> bool {
         let updated = self.bottom_pane.update_recording_meter_in_place(id, text);

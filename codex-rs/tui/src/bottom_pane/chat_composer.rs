@@ -388,7 +388,7 @@ pub(crate) struct ChatComposer {
     footer_flash: Option<FooterFlash>,
     context_window_percent: Option<i64>,
     // Monotonically increasing identifier for textarea elements we insert.
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     next_element_id: u64,
     context_window_used_tokens: Option<i64>,
     skills: Option<Vec<SkillMetadata>>,
@@ -570,7 +570,7 @@ impl ChatComposer {
             pending_slash_command_history: None,
             footer_flash: None,
             context_window_percent: None,
-            #[cfg(not(target_os = "linux"))]
+            #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
             next_element_id: 0,
             context_window_used_tokens: None,
             skills: None,
@@ -637,7 +637,7 @@ impl ChatComposer {
         this
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     fn next_id(&mut self) -> String {
         let id = self.next_element_id;
         self.next_element_id = self.next_element_id.wrapping_add(1);
@@ -2733,6 +2733,24 @@ impl ChatComposer {
         should_queue: bool,
         now: Instant,
     ) -> (InputResult, bool) {
+        // Repair the common failure mode where a terminal/keybinding drops the leading slash from
+        // "/status" while leaving either the full word or one of its typed suffixes in the composer.
+        let status_fragment =
+            crate::status_command_fragments::is_status_command_fragment(self.textarea.text());
+        if self.slash_commands_enabled()
+            && !self.is_bash_mode
+            && status_fragment
+            && self.current_text_elements().is_empty()
+            && self.attached_images.is_empty()
+            && self.remote_image_urls.is_empty()
+            && self.pending_pastes.is_empty()
+        {
+            self.stage_selected_slash_command_history(SlashCommand::Status);
+            self.textarea.set_text_clearing_elements("");
+            self.is_bash_mode = false;
+            return (InputResult::Command(SlashCommand::Status), true);
+        }
+
         if should_queue {
             let raw_text = self.textarea.text();
             let defer_slash_validation =
@@ -4176,7 +4194,7 @@ fn footer_insert_newline_key(
         .or_else(|| bindings.first().copied())
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
 impl ChatComposer {
     pub fn update_recording_meter_in_place(&mut self, id: &str, text: &str) -> bool {
         self.textarea.update_named_element_by_id(id, text)
@@ -4188,6 +4206,7 @@ impl ChatComposer {
         id
     }
 
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     pub fn remove_recording_meter_placeholder(&mut self, id: &str) {
         let _ = self.textarea.replace_element_by_id(id, "");
     }
@@ -4798,7 +4817,7 @@ mod tests {
         );
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     #[test]
     fn remove_recording_meter_placeholder_clears_placeholder_text() {
         let (tx, _rx) = unbounded_channel::<AppEvent>();
@@ -10120,6 +10139,38 @@ mod tests {
             composer.handle_key_event(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE));
         assert_eq!(result, InputResult::None);
         assert_eq!(composer.current_text(), "/diff");
+    }
+
+    #[test]
+    fn status_command_fragments_dispatch_canonical_status_command() {
+        for fragment in ["status", "tatus$", "atus", "tus", "us", "s"] {
+            let (tx, _rx) = unbounded_channel::<AppEvent>();
+            let sender = AppEventSender::new(tx);
+            let mut composer = ChatComposer::new(
+                /*has_input_focus*/ true,
+                sender,
+                /*enhanced_keys_supported*/ false,
+                "Ask Codex to do anything".to_string(),
+                /*disable_paste_burst*/ false,
+            );
+
+            composer.set_text_content(fragment.to_string(), Vec::new(), Vec::new());
+            let (result, _needs_redraw) =
+                composer.handle_key_event(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+
+            assert_eq!(
+                result,
+                InputResult::Command(SlashCommand::Status),
+                "fragment {fragment:?} should dispatch local status"
+            );
+            assert!(composer.textarea.is_empty());
+
+            composer.record_pending_slash_command_history();
+            let (result, _needs_redraw) =
+                composer.handle_key_event(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE));
+            assert_eq!(result, InputResult::None);
+            assert_eq!(composer.current_text(), "/status");
+        }
     }
 
     #[test]
