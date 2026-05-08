@@ -11,6 +11,7 @@ use codex_app_server_protocol::FileChangeApprovalDecision;
 use codex_app_server_protocol::McpServerElicitationAction;
 use codex_app_server_protocol::RequestId as AppServerRequestId;
 use codex_app_server_protocol::ReviewTarget;
+#[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
 use codex_app_server_protocol::ThreadRealtimeAudioChunk;
 use codex_app_server_protocol::ToolRequestUserInputResponse;
 use codex_protocol::ThreadId;
@@ -66,7 +67,7 @@ impl AppEventSender {
         )));
     }
 
-    #[cfg_attr(target_os = "linux", allow(dead_code))]
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     pub(crate) fn realtime_conversation_audio(&self, frame: ThreadRealtimeAudioChunk) {
         self.send(AppEvent::CodexOp(AppCommand::realtime_conversation_audio(
             frame,

@@ -633,13 +633,14 @@ pub(crate) enum AppEvent {
     },
 
     /// Persist the selected realtime microphone or speaker to top-level config.
-    #[cfg_attr(target_os = "linux", allow(dead_code))]
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     PersistRealtimeAudioDeviceSelection {
         kind: RealtimeAudioDeviceKind,
         name: Option<String>,
     },
 
     /// Restart the selected realtime microphone or speaker locally.
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     RestartRealtimeAudioDevice {
         kind: RealtimeAudioDeviceKind,
     },
@@ -856,7 +857,7 @@ pub(crate) enum AppEvent {
 
     /// Live update for the in-progress voice recording placeholder. Carries
     /// the placeholder `id` and the text to display (e.g., an ASCII meter).
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     UpdateRecordingMeter {
         id: String,
         text: String,

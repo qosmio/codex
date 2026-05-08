@@ -137,6 +137,16 @@ impl ChatWidget {
             );
             return (false, None);
         }
+        if shell_escape_policy == ShellEscapePolicy::Allow
+            && crate::status_command_fragments::is_status_command_fragment(&user_message.text)
+            && user_message.local_images.is_empty()
+            && user_message.remote_image_urls.is_empty()
+            && user_message.text_elements.is_empty()
+            && user_message.mention_bindings.is_empty()
+        {
+            self.dispatch_command(SlashCommand::Status);
+            return (true, None);
+        }
         let UserMessage {
             text,
             local_images,

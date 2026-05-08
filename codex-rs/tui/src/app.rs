@@ -10,6 +10,7 @@ use crate::app_event::ExitMode;
 use crate::app_event::FeedbackCategory;
 use crate::app_event::HistoryLookupResponse;
 use crate::app_event::RateLimitRefreshOrigin;
+#[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
 use crate::app_event::RealtimeAudioDeviceKind;
 #[cfg(target_os = "windows")]
 use crate::app_event::WindowsSandboxEnableMode;

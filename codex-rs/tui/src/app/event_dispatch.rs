@@ -1342,6 +1342,7 @@ impl App {
                     }
                 }
             }
+            #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
             AppEvent::PersistRealtimeAudioDeviceSelection { kind, name } => {
                 let builder = match kind {
                     RealtimeAudioDeviceKind::Microphone => {
@@ -1389,6 +1390,7 @@ impl App {
                     }
                 }
             }
+            #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
             AppEvent::RestartRealtimeAudioDevice { kind } => {
                 self.chat_widget.restart_realtime_audio_device(kind);
             }
@@ -1861,7 +1863,7 @@ impl App {
                     ));
                 }
             },
-            #[cfg(not(target_os = "linux"))]
+            #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
             AppEvent::UpdateRecordingMeter { id, text } => {
                 // Update in place to preserve the element id for subsequent frames.
                 let updated = self.chat_widget.update_recording_meter_in_place(&id, &text);
