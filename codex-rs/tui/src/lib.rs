@@ -170,6 +170,7 @@ mod slash_command;
 mod startup_error;
 mod startup_hooks_review;
 mod status;
+mod status_command_fragments;
 mod status_indicator_widget;
 mod streaming;
 mod style;
