@@ -2745,7 +2745,7 @@ impl ChatComposer {
             && self.remote_image_urls.is_empty()
             && self.pending_pastes.is_empty()
         {
-            self.stage_selected_slash_command_history(SlashCommand::Status);
+            self.stage_selected_slash_command_history(&CommandItem::Builtin(SlashCommand::Status));
             self.textarea.set_text_clearing_elements("");
             self.is_bash_mode = false;
             return (InputResult::Command(SlashCommand::Status), true);

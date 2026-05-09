@@ -9359,26 +9359,6 @@ impl ChatWidget {
             .set_connectors_enabled(self.connectors_enabled());
     }
 
-    pub(crate) fn should_show_fast_status(
-        &self,
-        model: &str,
-        service_tier: Option<ServiceTier>,
-    ) -> bool {
-        self.model_supports_fast_mode(model)
-            && matches!(service_tier, Some(ServiceTier::Fast))
-            && self.has_chatgpt_account
-    }
-
-    fn fast_mode_enabled(&self) -> bool {
-        self.config.features.enabled(Feature::FastMode)
-    }
-
-    pub(crate) fn can_toggle_fast_mode_from_keybinding(&self) -> bool {
-        self.fast_mode_enabled()
-            && !self.is_user_turn_pending_or_running()
-            && self.bottom_pane.no_modal_or_popup_active()
-    }
-
     #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     pub(crate) fn set_realtime_audio_device(
         &mut self,
