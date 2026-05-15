@@ -209,6 +209,7 @@ impl ChatWidget {
             .set_connectors_enabled(self.connectors_enabled());
     }
 
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     pub(crate) fn set_realtime_audio_device(
         &mut self,
         kind: RealtimeAudioDeviceKind,
@@ -250,6 +251,7 @@ impl ChatWidget {
             .unwrap_or_else(|| self.current_collaboration_mode.model())
     }
 
+    #[cfg(all(not(target_os = "linux"), feature = "realtime-audio"))]
     pub(crate) fn realtime_conversation_is_live(&self) -> bool {
         self.realtime_conversation.is_live()
     }

@@ -2818,9 +2818,8 @@ impl ChatComposer {
     ) -> (InputResult, bool) {
         // Repair the common failure mode where a terminal/keybinding drops the leading slash from
         // "/status" while leaving either the full word or one of its typed suffixes in the composer.
-        let status_fragment = crate::status_command_fragments::is_status_command_fragment(
-            self.draft.textarea.text(),
-        );
+        let status_fragment =
+            crate::status_command_fragments::is_status_command_fragment(self.draft.textarea.text());
         if self.slash_commands_enabled()
             && !self.draft.is_bash_mode
             && status_fragment
