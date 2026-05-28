@@ -1,6 +1,7 @@
 //! MCP tool-call, inventory, and output history cells.
 
 use super::*;
+use crate::render::highlight::highlight_code_to_styled_spans;
 
 #[derive(Debug)]
 struct CompletedMcpToolCallWithImageOutput {
@@ -136,7 +137,7 @@ impl HistoryCell for McpToolCallCell {
             "Calling"
         };
 
-        let invocation_line = line_to_static(&format_mcp_invocation(self.invocation.clone()));
+        let invocation_line = format_mcp_invocation_inline(&self.invocation);
         let mut compact_spans = vec![bullet.clone(), " ".into(), header_text.bold(), " ".into()];
         let mut compact_header = Line::from(compact_spans.clone());
         let reserved = compact_header.width();
@@ -151,11 +152,10 @@ impl HistoryCell for McpToolCallCell {
             compact_spans.pop(); // drop trailing space for standalone header
             lines.push(Line::from(compact_spans));
 
-            let opts = RtOptions::new((width as usize).saturating_sub(4))
-                .initial_indent("".into())
-                .subsequent_indent("    ".into());
-            let wrapped = adaptive_wrap_line(&invocation_line, opts);
-            let body_lines: Vec<Line<'static>> = wrapped.iter().map(line_to_static).collect();
+            let body_lines = format_mcp_invocation_block(
+                &self.invocation,
+                (width as usize).saturating_sub(4).max(1),
+            );
             lines.extend(prefix_lines(body_lines, "  └ ".dim(), "    ".into()));
         }
 
@@ -670,7 +670,11 @@ impl HistoryCell for McpInventoryLoadingCell {
 pub(crate) fn new_mcp_inventory_loading(animations_enabled: bool) -> McpInventoryLoadingCell {
     McpInventoryLoadingCell::new(animations_enabled)
 }
-fn format_mcp_invocation<'a>(invocation: McpInvocation) -> Line<'a> {
+fn format_mcp_invocation(invocation: McpInvocation) -> Line<'static> {
+    format_mcp_invocation_inline(&invocation)
+}
+
+fn format_mcp_invocation_inline(invocation: &McpInvocation) -> Line<'static> {
     let args_str = invocation
         .arguments
         .as_ref()
@@ -680,13 +684,86 @@ fn format_mcp_invocation<'a>(invocation: McpInvocation) -> Line<'a> {
         })
         .unwrap_or_default();
 
-    let invocation_spans = vec![
+    let mut invocation_spans = vec![
         invocation.server.clone().cyan(),
         ".".into(),
-        invocation.tool.cyan(),
+        invocation.tool.clone().cyan(),
         "(".into(),
-        args_str.dim(),
-        ")".into(),
     ];
+    invocation_spans.extend(format_mcp_arguments(&args_str));
+    invocation_spans.push(")".into());
     invocation_spans.into()
+}
+
+fn format_mcp_invocation_block(invocation: &McpInvocation, width: usize) -> Vec<Line<'static>> {
+    let Some(arguments) = invocation.arguments.as_ref() else {
+        return vec![format_mcp_invocation_inline(invocation)];
+    };
+    let args_str =
+        serde_json::to_string_pretty(arguments).unwrap_or_else(|_| arguments.to_string());
+
+    let mut lines = Vec::new();
+    push_wrapped_mcp_invocation_line(
+        &mut lines,
+        vec![
+            invocation.server.clone().cyan(),
+            ".".into(),
+            invocation.tool.clone().cyan(),
+            "(".into(),
+        ]
+        .into(),
+        width,
+    );
+    for argument_line in format_mcp_argument_lines(&args_str) {
+        let mut spans = vec!["  ".into()];
+        spans.extend(argument_line.spans);
+        push_wrapped_mcp_invocation_line(&mut lines, spans.into(), width);
+    }
+    push_wrapped_mcp_invocation_line(&mut lines, ")".into(), width);
+    lines
+}
+
+fn format_mcp_arguments(args: &str) -> Vec<Span<'static>> {
+    if args.is_empty() {
+        return Vec::new();
+    }
+
+    highlight_code_to_styled_spans(args, "json")
+        .and_then(|lines| lines.into_iter().next())
+        .unwrap_or_else(|| vec![args.to_string().dim()])
+}
+
+fn format_mcp_argument_lines(args: &str) -> Vec<Line<'static>> {
+    if args.is_empty() {
+        return Vec::new();
+    }
+
+    highlight_code_to_styled_spans(args, "json")
+        .map(|lines| lines.into_iter().map(Line::from).collect())
+        .unwrap_or_else(|| {
+            args.lines()
+                .map(|line| Line::from(line.to_string().dim()))
+                .collect()
+        })
+}
+
+fn push_wrapped_mcp_invocation_line(
+    lines: &mut Vec<Line<'static>>,
+    line: Line<'static>,
+    width: usize,
+) {
+    let leading_spaces = line
+        .spans
+        .iter()
+        .flat_map(|span| span.content.chars())
+        .take_while(|ch| *ch == ' ')
+        .count();
+    let subsequent_indent = " ".repeat((leading_spaces + 2).max(2));
+    let wrapped = adaptive_wrap_line(
+        &line,
+        RtOptions::new(width)
+            .initial_indent("".into())
+            .subsequent_indent(subsequent_indent.into()),
+    );
+    lines.extend(wrapped.iter().map(line_to_static));
 }

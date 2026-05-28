@@ -51,6 +51,9 @@ const QUIET_HOOK_MIN_VISIBLE: Duration = Duration::from_millis(600);
 const HOOK_OUTPUT_INDENT: &str = "  ";
 const HOOK_OUTPUT_BODY_INDENT: &str = "    ";
 
+/// Keep short hook context visible, but summarize large injected prompt/context blobs.
+const HOOK_CONTEXT_INLINE_MAX_BYTES: usize = 240;
+
 #[derive(Debug)]
 struct HookRunCell {
     /// Stable protocol id used to match begin/end updates for the same hook invocation.
@@ -446,18 +449,7 @@ impl HookRunCell {
                     .into(),
                 );
                 for entry in entries {
-                    let prefix = hook_output_prefix(entry.kind);
-                    let mut output_lines = entry.text.split('\n');
-                    if let Some(first_line) = output_lines.next() {
-                        lines.push(format!("{HOOK_OUTPUT_INDENT}{prefix}{first_line}").into());
-                    }
-                    for line in output_lines {
-                        if line.is_empty() {
-                            lines.push("".into());
-                        } else {
-                            lines.push(format!("{HOOK_OUTPUT_BODY_INDENT}{line}").into());
-                        }
-                    }
+                    lines.extend(format_hook_output_entry(entry));
                 }
             }
             HookRunState::PendingReveal { .. } => {}
@@ -722,6 +714,53 @@ fn hook_output_prefix(kind: HookOutputEntryKind) -> &'static str {
     }
 }
 
+fn format_hook_output_entry(entry: &HookOutputEntry) -> Vec<Line<'static>> {
+    let text = match entry.kind {
+        HookOutputEntryKind::Context => summarize_hook_context(&entry.text),
+        HookOutputEntryKind::Warning
+        | HookOutputEntryKind::Stop
+        | HookOutputEntryKind::Feedback
+        | HookOutputEntryKind::Error => entry.text.clone(),
+    };
+
+    let prefix = hook_output_prefix(entry.kind);
+    let mut output_lines = text.split('\n');
+    let mut lines = Vec::new();
+    if let Some(first_line) = output_lines.next() {
+        lines.push(format!("{HOOK_OUTPUT_INDENT}{prefix}{first_line}").into());
+    }
+    for line in output_lines {
+        if line.is_empty() {
+            lines.push("".into());
+        } else {
+            lines.push(format!("{HOOK_OUTPUT_BODY_INDENT}{line}").into());
+        }
+    }
+    lines
+}
+
+fn summarize_hook_context(text: &str) -> String {
+    if text.len() <= HOOK_CONTEXT_INLINE_MAX_BYTES && !text.contains('\n') {
+        return text.to_string();
+    }
+
+    let line_count = text.lines().count().max(1);
+    format!(
+        "injected {} across {} {}",
+        format_byte_count(text.len()),
+        line_count,
+        if line_count == 1 { "line" } else { "lines" }
+    )
+}
+
+fn format_byte_count(bytes: usize) -> String {
+    if bytes < 1024 {
+        format!("{bytes} bytes")
+    } else {
+        format!("{:.1} KB", bytes as f64 / 1024.0)
+    }
+}
+
 fn hook_event_label(event_name: HookEventName) -> &'static str {
     match event_name {
         HookEventName::PreToolUse => "PreToolUse",
@@ -760,22 +799,20 @@ mod tests {
     }
 
     #[test]
-    fn completed_hook_multiline_context_preserves_display_and_raw_lines() {
+    fn completed_hook_multiline_context_renders_summary_in_display_and_raw_lines() {
+        let first_line = "a".repeat(300);
+        let second_line = "b".repeat(300);
         let cell = completed_hook_cell(
             HookEventName::SessionStart,
             HookRunStatus::Completed,
             vec![HookOutputEntry {
                 kind: HookOutputEntryKind::Context,
-                text: "## Working Memory Recall\n\nSource: Codex compaction\nScope: Durable workspace memory"
-                    .to_string(),
+                text: format!("{first_line}\n{second_line}"),
             }],
         );
         let expected = vec![
             "• SessionStart hook (completed)".to_string(),
-            "  hook context: ## Working Memory Recall".to_string(),
-            "".to_string(),
-            "    Source: Codex compaction".to_string(),
-            "    Scope: Durable workspace memory".to_string(),
+            "  hook context: injected 601 bytes across 2 lines".to_string(),
         ];
 
         assert_eq!(line_texts(&cell.display_lines(/*width*/ 80)), expected);
@@ -800,6 +837,36 @@ mod tests {
                 "  warning: Heads up".to_string(),
                 "    Review generated files".to_string(),
             ]
+        );
+    }
+
+    #[test]
+    fn long_context_entry_renders_as_summary() {
+        let first_line = "a".repeat(300);
+        let second_line = "b".repeat(300);
+        let entry = HookOutputEntry {
+            kind: HookOutputEntryKind::Context,
+            text: format!("{first_line}\n{second_line}"),
+        };
+        let rendered = format_hook_output_entry(&entry);
+
+        assert_eq!(
+            line_texts(&rendered),
+            vec!["  hook context: injected 601 bytes across 2 lines".to_string()]
+        );
+    }
+
+    #[test]
+    fn short_context_entry_stays_readable_inline() {
+        let entry = HookOutputEntry {
+            kind: HookOutputEntryKind::Context,
+            text: "Remember the startup checklist.".to_string(),
+        };
+        let rendered = format_hook_output_entry(&entry);
+
+        assert_eq!(
+            line_texts(&rendered),
+            vec!["  hook context: Remember the startup checklist.".to_string()]
         );
     }
 

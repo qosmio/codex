@@ -1224,6 +1224,88 @@ fn active_mcp_tool_call_snapshot() {
 }
 
 #[test]
+fn mcp_tool_call_highlights_json_arguments() {
+    let invocation = McpInvocation {
+        server: "context-mode".into(),
+        tool: "ctx_execute".into(),
+        arguments: Some(json!({
+            "language": "shell",
+            "timeout": 30000,
+            "code": "echo ok",
+        })),
+    };
+
+    let cell = new_active_mcp_tool_call(
+        "call-highlight".into(),
+        invocation,
+        /*animations_enabled*/ false,
+    );
+    let lines = cell.display_lines(/*width*/ 120);
+    let spans = &lines[0].spans;
+    let open_idx = spans
+        .iter()
+        .position(|span| span.content.as_ref() == "(")
+        .expect("MCP invocation should include argument open paren");
+    let close_idx = spans
+        .iter()
+        .rposition(|span| span.content.as_ref() == ")")
+        .expect("MCP invocation should include argument close paren");
+
+    assert!(
+        spans[open_idx + 1..close_idx]
+            .iter()
+            .any(|span| span.style.fg.is_some()),
+        "expected JSON argument spans to carry syntax colors",
+    );
+}
+
+#[test]
+fn mcp_tool_call_pretty_prints_wide_json_arguments() {
+    let invocation = McpInvocation {
+        server: "context-mode".into(),
+        tool: "ctx_batch_execute".into(),
+        arguments: Some(json!({
+            "commands": [
+                {
+                    "label": "repo status codex-rs resume",
+                    "command": "git status --short --branch",
+                },
+                {
+                    "label": "recent commits codex-rs resume",
+                    "command": "git log --oneline -5 --decorate",
+                },
+            ],
+            "queries": [
+                "current branch dirty files",
+                "changed files diff stat",
+            ],
+            "concurrency": 4,
+            "timeout": 10000,
+        })),
+    };
+
+    let cell = new_active_mcp_tool_call(
+        "call-wide".into(),
+        invocation,
+        /*animations_enabled*/ false,
+    );
+    let rendered = render_lines(&cell.display_lines(/*width*/ 72));
+
+    assert_eq!(rendered[0], "• Calling");
+    assert_eq!(rendered[1], "  └ context-mode.ctx_batch_execute(");
+    assert!(
+        rendered
+            .iter()
+            .any(|line| line == "        \"commands\": ["),
+        "expected pretty-printed command array, got {rendered:#?}",
+    );
+    assert!(
+        rendered.iter().any(|line| line == "    )"),
+        "expected invocation close paren on its own line, got {rendered:#?}",
+    );
+}
+
+#[test]
 fn mcp_inventory_loading_snapshot() {
     let cell = new_mcp_inventory_loading(/*animations_enabled*/ true);
     let rendered = render_lines(&cell.display_lines(/*width*/ 80)).join("\n");
