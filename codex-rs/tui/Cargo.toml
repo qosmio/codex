@@ -144,7 +144,7 @@ winsplit = "0.1"
 # Clipboard support via `arboard` is not available on Android/Termux.
 # Only include it for non-Android targets so the crate builds on Android.
 [target.'cfg(not(target_os = "android"))'.dependencies]
-arboard = { workspace = true }
+arboard = { workspace = true, optional = true }
 
 
 [dev-dependencies]

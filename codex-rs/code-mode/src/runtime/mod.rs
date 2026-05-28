@@ -9,7 +9,6 @@ mod timers;
 #[cfg(feature = "runtime")]
 mod value;
 
-use std::collections::HashMap;
 #[cfg(feature = "runtime")]
 use std::panic::AssertUnwindSafe;
 #[cfg(feature = "runtime")]

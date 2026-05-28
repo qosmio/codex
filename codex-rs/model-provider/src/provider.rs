@@ -17,6 +17,7 @@ use codex_protocol::account::ProviderAccount;
 use codex_protocol::error::CodexErr;
 use codex_protocol::openai_models::ModelsResponse;
 
+#[cfg(feature = "amazon-bedrock")]
 use crate::amazon_bedrock::AmazonBedrockModelProvider;
 use crate::auth::ProviderAuthScope;
 use crate::auth::ResolvedProviderAuth;
@@ -219,11 +220,12 @@ pub fn create_model_provider(
     provider_info: ModelProviderInfo,
     auth_manager: Option<Arc<AuthManager>>,
 ) -> SharedModelProvider {
+    #[cfg(feature = "amazon-bedrock")]
     if provider_info.is_amazon_bedrock() {
-        Arc::new(AmazonBedrockModelProvider::new(provider_info, auth_manager))
-    } else {
-        Arc::new(ConfiguredModelProvider::new(provider_info, auth_manager))
+        return Arc::new(AmazonBedrockModelProvider::new(provider_info));
     }
+
+    Arc::new(ConfiguredModelProvider::new(provider_info, auth_manager))
 }
 
 /// Runtime model provider backed by configured `ModelProviderInfo`.
@@ -338,6 +340,7 @@ mod tests {
 
     use codex_login::auth::AgentIdentityAuthPolicy;
     use codex_login::auth::BedrockApiKeyAuth;
+    #[cfg(feature = "amazon-bedrock")]
     use codex_model_provider_info::ModelProviderAwsAuthInfo;
     use codex_model_provider_info::WireApi;
     use codex_model_provider_info::create_oss_provider_with_base_url;
@@ -509,6 +512,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "amazon-bedrock")]
     fn create_model_provider_does_not_use_openai_auth_manager_for_amazon_bedrock_provider() {
         let provider = create_model_provider(
             ModelProviderInfo::create_amazon_bedrock_provider(Some(ModelProviderAwsAuthInfo {
@@ -625,6 +629,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "amazon-bedrock")]
     fn amazon_bedrock_provider_returns_bedrock_account_state() {
         let provider = create_model_provider(
             ModelProviderInfo::create_amazon_bedrock_provider(/*aws*/ None),
@@ -644,6 +649,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "amazon-bedrock")]
     async fn amazon_bedrock_provider_creates_static_models_manager() {
         let provider = create_model_provider(
             ModelProviderInfo::create_amazon_bedrock_provider(/*aws*/ None),
@@ -681,6 +687,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "amazon-bedrock")]
     async fn configured_bedrock_catalog_only_allows_default_service_tier() {
         let configured_model = codex_models_manager::bundled_models_response()
             .expect("bundled models should parse")
