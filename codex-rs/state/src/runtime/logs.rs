@@ -293,6 +293,21 @@ WHERE id IN (
         Ok(result.rows_affected())
     }
 
+    pub async fn delete_logs(&self, query: &LogQuery) -> anyhow::Result<u64> {
+        let mut builder = QueryBuilder::<Sqlite>::new("DELETE FROM logs WHERE 1 = 1");
+        push_log_filters(&mut builder, query);
+        let result = builder.build().execute(self.logs_pool.as_ref()).await?;
+        Ok(result.rows_affected())
+    }
+
+    /// Rebuild the logs database file so deleted rows return disk space.
+    pub async fn vacuum_logs(&self) -> anyhow::Result<()> {
+        sqlx::query("VACUUM")
+            .execute(self.logs_pool.as_ref())
+            .await?;
+        Ok(())
+    }
+
     pub(crate) async fn run_logs_startup_maintenance(&self) -> anyhow::Result<()> {
         let Some(cutoff) =
             Utc::now().checked_sub_signed(chrono::Duration::days(LOG_RETENTION_DAYS))
@@ -444,6 +459,14 @@ WHERE cumulative_estimated_bytes <=
         let max_id: Option<i64> = row.try_get("max_id")?;
         Ok(max_id.unwrap_or(0))
     }
+
+    pub async fn matching_log_count(&self, query: &LogQuery) -> anyhow::Result<i64> {
+        let mut builder =
+            QueryBuilder::<Sqlite>::new("SELECT COUNT(*) AS row_count FROM logs WHERE 1 = 1");
+        push_log_filters(&mut builder, query);
+        let row = builder.build().fetch_one(self.logs_pool.as_ref()).await?;
+        row.try_get("row_count").map_err(anyhow::Error::from)
+    }
 }
 
 #[derive(sqlx::FromRow)]
@@ -489,6 +512,7 @@ fn push_log_filters(builder: &mut QueryBuilder<Sqlite>, query: &LogQuery) {
     if let Some(to_ts) = query.to_ts {
         builder.push(" AND ts <= ").push_bind(to_ts);
     }
+    push_like_filters(builder, "target", &query.target_like);
     push_like_filters(builder, "module_path", &query.module_like);
     push_like_filters(builder, "file", &query.file_like);
     let has_thread_filter = !query.thread_ids.is_empty() || query.include_threadless;

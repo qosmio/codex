@@ -49,6 +49,7 @@ use crate::StateRuntime;
 const LOG_QUEUE_CAPACITY: usize = 512;
 const LOG_BATCH_SIZE: usize = 128;
 const LOG_FLUSH_INTERVAL: Duration = Duration::from_secs(2);
+const MAX_FEEDBACK_LOG_BODY_BYTES: usize = 64 * 1024;
 
 pub fn default_filter() -> Targets {
     Targets::new()
@@ -223,7 +224,7 @@ where
             .thread_id
             .clone()
             .or_else(|| event_thread_id(event, &ctx));
-        let feedback_log_body = format_feedback_log_body(event, &ctx);
+        let feedback_log_body = truncate_feedback_log_body(format_feedback_log_body(event, &ctx));
 
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -359,6 +360,20 @@ where
         }
     }
     feedback_log_body.push_str(&format_fields(event));
+    feedback_log_body
+}
+
+fn truncate_feedback_log_body(mut feedback_log_body: String) -> String {
+    if feedback_log_body.len() <= MAX_FEEDBACK_LOG_BODY_BYTES {
+        return feedback_log_body;
+    }
+
+    let mut boundary = MAX_FEEDBACK_LOG_BODY_BYTES;
+    while !feedback_log_body.is_char_boundary(boundary) {
+        boundary -= 1;
+    }
+    feedback_log_body.truncate(boundary);
+    feedback_log_body.push_str(" ... [truncated]");
     feedback_log_body
 }
 
@@ -663,6 +678,17 @@ mod tests {
         assert_eq!(after_flush[0].message.as_deref(), Some("buffered-log"));
 
         let _ = tokio::fs::remove_dir_all(codex_home).await;
+    }
+
+    #[test]
+    fn truncate_feedback_log_body_caps_rows_without_breaking_utf8() {
+        let prefix = "a".repeat(MAX_FEEDBACK_LOG_BODY_BYTES - 1);
+        let suffix = "\u{00e9}".repeat(8);
+        let body = format!("{prefix}{suffix}");
+
+        let truncated = truncate_feedback_log_body(body);
+
+        assert_eq!(truncated, format!("{prefix} ... [truncated]"));
     }
 
     #[tokio::test]

@@ -10,6 +10,7 @@ const _: () = assert!(
 );
 
 mod audit;
+mod debug_logs;
 mod extract;
 pub mod log_db;
 mod migrations;
@@ -27,6 +28,7 @@ pub use runtime::StateRuntime;
 
 pub use audit::ThreadStateAuditRow;
 pub use audit::read_thread_state_audit_rows;
+pub use debug_logs::DebugLogsCommand;
 /// Low-level storage engine: useful for focused tests.
 ///
 /// Most consumers should prefer [`StateRuntime`].

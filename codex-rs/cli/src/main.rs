@@ -235,6 +235,9 @@ enum DebugSubcommand {
     /// Render the model-visible prompt input list as JSON.
     PromptInput(DebugPromptInputCommand),
 
+    /// Inspect or clean the local logs SQLite database.
+    Logs(codex_state::DebugLogsCommand),
+
     /// Replay a rollout trace bundle and write reduced state JSON.
     #[clap(hide = true)]
     TraceReduce(DebugTraceReduceCommand),
@@ -1517,6 +1520,14 @@ async fn cli_main(
                     arg0_paths.clone(),
                 )
                 .await?;
+            }
+            DebugSubcommand::Logs(cmd) => {
+                reject_remote_mode_for_subcommand(
+                    root_remote.as_deref(),
+                    root_remote_auth_token_env.as_deref(),
+                    "debug logs",
+                )?;
+                cmd.run().await?;
             }
             DebugSubcommand::TraceReduce(cmd) => {
                 reject_remote_mode_for_subcommand(

@@ -39,6 +39,10 @@ struct Args {
     #[arg(long = "module")]
     module: Vec<String>,
 
+    /// Substring match on tracing target. Repeat to include multiple substrings.
+    #[arg(long = "target")]
+    target: Vec<String>,
+
     /// Substring match on file path. Repeat to include multiple substrings.
     #[arg(long = "file")]
     file: Vec<String>,
@@ -66,6 +70,14 @@ struct Args {
     /// Show compact output with only time, level, and rendered log body.
     #[arg(long)]
     compact: bool,
+
+    /// Delete matching log rows instead of tailing them.
+    #[arg(long)]
+    delete: bool,
+
+    /// Actually delete rows. Without this, --delete prints the matching row count.
+    #[arg(long, requires = "delete")]
+    yes: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -73,6 +85,7 @@ struct LogFilter {
     levels_upper: Vec<String>,
     from_ts: Option<i64>,
     to_ts: Option<i64>,
+    target_like: Vec<String>,
     module_like: Vec<String>,
     file_like: Vec<String>,
     thread_ids: Vec<String>,
@@ -113,8 +126,12 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or_else(|| PathBuf::from("."));
     let runtime = StateRuntime::init(codex_home, "logs-client".to_string()).await?;
 
-    let mut last_id =
-        print_backfill(runtime.as_ref(), &filter, args.backfill, args.compact).await?;
+    let mut last_id = if args.delete {
+        delete_matching_logs(runtime.as_ref(), &filter, args.yes).await?;
+        return Ok(());
+    } else {
+        print_backfill(runtime.as_ref(), &filter, args.backfill, args.compact).await?
+    };
     if last_id == 0 {
         last_id = fetch_max_id(runtime.as_ref(), &filter).await?;
     }
@@ -169,6 +186,12 @@ fn build_filter(args: &Args) -> anyhow::Result<LogFilter> {
         .filter(|module| !module.is_empty())
         .cloned()
         .collect::<Vec<_>>();
+    let target_like = args
+        .target
+        .iter()
+        .filter(|target| !target.is_empty())
+        .cloned()
+        .collect::<Vec<_>>();
     let file_like = args
         .file
         .iter()
@@ -186,12 +209,52 @@ fn build_filter(args: &Args) -> anyhow::Result<LogFilter> {
         levels_upper,
         from_ts,
         to_ts,
+        target_like,
         module_like,
         file_like,
         thread_ids,
         search: args.search.clone(),
         include_threadless: args.threadless,
     })
+}
+
+async fn delete_matching_logs(
+    runtime: &StateRuntime,
+    filter: &LogFilter,
+    yes: bool,
+) -> anyhow::Result<()> {
+    ensure_delete_filter(filter)?;
+    let query = to_log_query(
+        filter, /*limit*/ None, /*after_id*/ None, /*descending*/ false,
+    );
+    let matching_rows = runtime
+        .matching_log_count(&query)
+        .await
+        .context("failed to count matching logs")?;
+    if yes {
+        let deleted_rows = runtime
+            .delete_logs(&query)
+            .await
+            .context("failed to delete matching logs")?;
+        println!("Deleted {deleted_rows} matching log rows.");
+    } else {
+        println!("Would delete {matching_rows} matching log rows. Re-run with --yes to delete.");
+    }
+    Ok(())
+}
+
+fn ensure_delete_filter(filter: &LogFilter) -> anyhow::Result<()> {
+    let has_filter = !filter.levels_upper.is_empty()
+        || filter.from_ts.is_some()
+        || filter.to_ts.is_some()
+        || !filter.target_like.is_empty()
+        || !filter.module_like.is_empty()
+        || !filter.file_like.is_empty()
+        || !filter.thread_ids.is_empty()
+        || filter.search.is_some()
+        || filter.include_threadless;
+    anyhow::ensure!(has_filter, "--delete requires at least one filter");
+    Ok(())
 }
 
 fn parse_timestamp(value: &str) -> anyhow::Result<i64> {
@@ -279,6 +342,7 @@ fn to_log_query(
         levels_upper: filter.levels_upper.clone(),
         from_ts: filter.from_ts,
         to_ts: filter.to_ts,
+        target_like: filter.target_like.clone(),
         module_like: filter.module_like.clone(),
         file_like: filter.file_like.clone(),
         thread_ids: filter.thread_ids.clone(),
@@ -412,5 +476,42 @@ mod tests {
             .expect("parse uppercase log level");
 
         assert_eq!(args.level, Some(LogLevelThreshold::Warn));
+    }
+
+    #[test]
+    fn delete_requires_a_filter() {
+        let filter = LogFilter {
+            levels_upper: Vec::new(),
+            from_ts: None,
+            to_ts: None,
+            target_like: Vec::new(),
+            module_like: Vec::new(),
+            file_like: Vec::new(),
+            thread_ids: Vec::new(),
+            search: None,
+            include_threadless: false,
+        };
+
+        assert!(ensure_delete_filter(&filter).is_err());
+    }
+
+    #[test]
+    fn delete_accepts_target_filter_without_confirmation() {
+        let args = Args::try_parse_from([
+            "codex-state-logs",
+            "--delete",
+            "--level",
+            "trace",
+            "--target",
+            "noisy_crate",
+        ])
+        .expect("parse delete dry-run");
+        let filter = build_filter(&args).expect("build filter");
+
+        assert!(args.delete);
+        assert!(!args.yes);
+        assert_eq!(filter.levels_upper, vec!["TRACE".to_string()]);
+        assert_eq!(filter.target_like, vec!["noisy_crate".to_string()]);
+        assert!(ensure_delete_filter(&filter).is_ok());
     }
 }
