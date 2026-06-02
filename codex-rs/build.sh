@@ -29,7 +29,8 @@ Defaults:
   cargo build -p codex-cli --no-default-features --profile lto
 
 The script does not build zsh. It packages an existing patched zsh from
---zsh-dir, --zsh-tar, CODEX_ZSH_DIR, CODEX_ZSH_TARBALL, or ./codex-zsh.
+--zsh-dir, --zsh-tar, CODEX_ZSH_DIR, CODEX_ZSH_TARBALL, ./codex-zsh, or
+downloads the checked-in codex-zsh DotSlash artifact when no local zsh is found.
 EOF
 }
 
@@ -201,8 +202,34 @@ cleanup() {
 }
 trap cleanup EXIT
 
+resolve_zsh_from_package_builder() {
+  python3 - "$repo_root" "$target_triple" <<'PY'
+import sys
+from pathlib import Path
+
+repo_root = Path(sys.argv[1])
+target_triple = sys.argv[2]
+sys.path.insert(0, str(repo_root.parent / "scripts"))
+
+from codex_package.targets import TARGET_SPECS
+from codex_package.zsh import resolve_zsh_bin
+
+spec = TARGET_SPECS.get(target_triple)
+if spec is None:
+    supported = ", ".join(sorted(TARGET_SPECS))
+    raise SystemExit(f"no bundled zsh target for {target_triple}; supported targets: {supported}")
+
+zsh_bin = resolve_zsh_bin(spec)
+if zsh_bin is None:
+    raise SystemExit(f"no bundled zsh artifact for {target_triple}")
+
+print(zsh_bin)
+PY
+}
+
 resolve_zsh() {
   local candidate
+  local resolved_zsh
 
   if [[ -n "$zsh_dir" ]]; then
     for candidate in "$zsh_dir/bin/zsh" "$zsh_dir/zsh/bin/zsh" "$zsh_dir/zsh"; do
@@ -222,6 +249,9 @@ resolve_zsh() {
     zsh_tar="$repo_root/codex-zsh-x86_64-unknown-linux-musl.tar.gz"
   elif [[ -x "$repo_root/codex-zsh/bin/zsh" ]]; then
     printf "%s\n" "$repo_root/codex-zsh/bin/zsh"
+    return 0
+  elif resolved_zsh="$(resolve_zsh_from_package_builder)"; then
+    printf '%s\n' "$resolved_zsh"
     return 0
   else
     die "no bundled zsh found; pass --zsh-dir or --zsh-tar"
