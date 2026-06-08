@@ -124,6 +124,14 @@ pub struct TuiChatKeymap {
     pub decrease_reasoning_effort: Option<KeybindingsSpec>,
     /// Increase the active reasoning effort.
     pub increase_reasoning_effort: Option<KeybindingsSpec>,
+    /// Set the active reasoning effort to low.
+    pub set_reasoning_effort_low: Option<KeybindingsSpec>,
+    /// Set the active reasoning effort to medium.
+    pub set_reasoning_effort_medium: Option<KeybindingsSpec>,
+    /// Set the active reasoning effort to high.
+    pub set_reasoning_effort_high: Option<KeybindingsSpec>,
+    /// Set the active reasoning effort to extra high.
+    pub set_reasoning_effort_xhigh: Option<KeybindingsSpec>,
     /// Edit the most recently queued message.
     pub edit_queued_message: Option<KeybindingsSpec>,
 }
@@ -650,6 +658,29 @@ mod tests {
         "#;
         let keymap: TuiKeymap = toml::from_str(toml_input).expect("valid config");
         assert!(keymap.global.open_transcript.is_some());
+    }
+
+    #[test]
+    fn direct_reasoning_actions_under_chat_context_are_accepted() {
+        let toml_input = r#"
+            [chat]
+            set_reasoning_effort_low = "alt-1"
+            set_reasoning_effort_medium = "alt-2"
+            set_reasoning_effort_high = "alt-3"
+            set_reasoning_effort_xhigh = "alt-4"
+        "#;
+        let keymap: TuiKeymap = toml::from_str(toml_input).expect("valid config");
+        let mut expected = TuiKeymap::default();
+        expected.chat.set_reasoning_effort_low =
+            Some(KeybindingsSpec::One(KeybindingSpec("alt-1".to_string())));
+        expected.chat.set_reasoning_effort_medium =
+            Some(KeybindingsSpec::One(KeybindingSpec("alt-2".to_string())));
+        expected.chat.set_reasoning_effort_high =
+            Some(KeybindingsSpec::One(KeybindingSpec("alt-3".to_string())));
+        expected.chat.set_reasoning_effort_xhigh =
+            Some(KeybindingsSpec::One(KeybindingSpec("alt-4".to_string())));
+
+        assert_eq!(keymap, expected);
     }
 
     #[test]

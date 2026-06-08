@@ -86,6 +86,14 @@ pub(crate) struct ChatKeymap {
     pub(crate) decrease_reasoning_effort: Vec<KeyBinding>,
     /// Increase the active reasoning effort.
     pub(crate) increase_reasoning_effort: Vec<KeyBinding>,
+    /// Set the active reasoning effort to low.
+    pub(crate) set_reasoning_effort_low: Vec<KeyBinding>,
+    /// Set the active reasoning effort to medium.
+    pub(crate) set_reasoning_effort_medium: Vec<KeyBinding>,
+    /// Set the active reasoning effort to high.
+    pub(crate) set_reasoning_effort_high: Vec<KeyBinding>,
+    /// Set the active reasoning effort to extra high.
+    pub(crate) set_reasoning_effort_xhigh: Vec<KeyBinding>,
     /// Edit the most recently queued message.
     pub(crate) edit_queued_message: Vec<KeyBinding>,
 }
@@ -439,6 +447,26 @@ impl RuntimeKeymap {
                 keymap.chat.increase_reasoning_effort.as_ref(),
                 &defaults.chat.increase_reasoning_effort,
                 "tui.keymap.chat.increase_reasoning_effort",
+            )?,
+            set_reasoning_effort_low: resolve_bindings(
+                keymap.chat.set_reasoning_effort_low.as_ref(),
+                &defaults.chat.set_reasoning_effort_low,
+                "tui.keymap.chat.set_reasoning_effort_low",
+            )?,
+            set_reasoning_effort_medium: resolve_bindings(
+                keymap.chat.set_reasoning_effort_medium.as_ref(),
+                &defaults.chat.set_reasoning_effort_medium,
+                "tui.keymap.chat.set_reasoning_effort_medium",
+            )?,
+            set_reasoning_effort_high: resolve_bindings(
+                keymap.chat.set_reasoning_effort_high.as_ref(),
+                &defaults.chat.set_reasoning_effort_high,
+                "tui.keymap.chat.set_reasoning_effort_high",
+            )?,
+            set_reasoning_effort_xhigh: resolve_bindings(
+                keymap.chat.set_reasoning_effort_xhigh.as_ref(),
+                &defaults.chat.set_reasoning_effort_xhigh,
+                "tui.keymap.chat.set_reasoning_effort_xhigh",
             )?,
             edit_queued_message: resolve_bindings(
                 keymap.chat.edit_queued_message.as_ref(),
@@ -927,6 +955,10 @@ impl RuntimeKeymap {
                     alt(KeyCode::Char('.')),
                     shift(KeyCode::Up)
                 ],
+                set_reasoning_effort_low: default_bindings![alt(KeyCode::Char('1'))],
+                set_reasoning_effort_medium: default_bindings![alt(KeyCode::Char('2'))],
+                set_reasoning_effort_high: default_bindings![alt(KeyCode::Char('3'))],
+                set_reasoning_effort_xhigh: default_bindings![alt(KeyCode::Char('4'))],
                 edit_queued_message: default_bindings![alt(KeyCode::Up), shift(KeyCode::Left)],
             },
             composer: ComposerKeymap {
@@ -1185,6 +1217,22 @@ impl RuntimeKeymap {
                     self.chat.increase_reasoning_effort.as_slice(),
                 ),
                 (
+                    "chat.set_reasoning_effort_low",
+                    self.chat.set_reasoning_effort_low.as_slice(),
+                ),
+                (
+                    "chat.set_reasoning_effort_medium",
+                    self.chat.set_reasoning_effort_medium.as_slice(),
+                ),
+                (
+                    "chat.set_reasoning_effort_high",
+                    self.chat.set_reasoning_effort_high.as_slice(),
+                ),
+                (
+                    "chat.set_reasoning_effort_xhigh",
+                    self.chat.set_reasoning_effort_xhigh.as_slice(),
+                ),
+                (
                     "chat.edit_queued_message",
                     self.chat.edit_queued_message.as_slice(),
                 ),
@@ -1226,6 +1274,22 @@ impl RuntimeKeymap {
                 (
                     "chat.increase_reasoning_effort",
                     self.chat.increase_reasoning_effort.as_slice(),
+                ),
+                (
+                    "chat.set_reasoning_effort_low",
+                    self.chat.set_reasoning_effort_low.as_slice(),
+                ),
+                (
+                    "chat.set_reasoning_effort_medium",
+                    self.chat.set_reasoning_effort_medium.as_slice(),
+                ),
+                (
+                    "chat.set_reasoning_effort_high",
+                    self.chat.set_reasoning_effort_high.as_slice(),
+                ),
+                (
+                    "chat.set_reasoning_effort_xhigh",
+                    self.chat.set_reasoning_effort_xhigh.as_slice(),
                 ),
                 (
                     "chat.edit_queued_message",
@@ -1336,6 +1400,22 @@ impl RuntimeKeymap {
                 (
                     "chat.increase_reasoning_effort",
                     self.chat.increase_reasoning_effort.as_slice(),
+                ),
+                (
+                    "chat.set_reasoning_effort_low",
+                    self.chat.set_reasoning_effort_low.as_slice(),
+                ),
+                (
+                    "chat.set_reasoning_effort_medium",
+                    self.chat.set_reasoning_effort_medium.as_slice(),
+                ),
+                (
+                    "chat.set_reasoning_effort_high",
+                    self.chat.set_reasoning_effort_high.as_slice(),
+                ),
+                (
+                    "chat.set_reasoning_effort_xhigh",
+                    self.chat.set_reasoning_effort_xhigh.as_slice(),
                 ),
                 ("composer.submit", self.composer.submit.as_slice()),
                 ("toggle_vim_mode", self.app.toggle_vim_mode.as_slice()),
@@ -2224,6 +2304,22 @@ mod tests {
             ]
         );
         assert_eq!(
+            runtime.chat.set_reasoning_effort_low,
+            vec![key_hint::alt(KeyCode::Char('1'))]
+        );
+        assert_eq!(
+            runtime.chat.set_reasoning_effort_medium,
+            vec![key_hint::alt(KeyCode::Char('2'))]
+        );
+        assert_eq!(
+            runtime.chat.set_reasoning_effort_high,
+            vec![key_hint::alt(KeyCode::Char('3'))]
+        );
+        assert_eq!(
+            runtime.chat.set_reasoning_effort_xhigh,
+            vec![key_hint::alt(KeyCode::Char('4'))]
+        );
+        assert_eq!(
             runtime.chat.edit_queued_message,
             vec![key_hint::alt(KeyCode::Up), key_hint::shift(KeyCode::Left)]
         );
@@ -2325,6 +2421,14 @@ mod tests {
         keymap.chat.increase_reasoning_effort = Some(one("shift-up"));
 
         expect_conflict(&keymap, "chat.increase_reasoning_effort", "editor.move_up");
+    }
+
+    #[test]
+    fn direct_reasoning_binding_conflicts_with_main_surface_binding() {
+        let mut keymap = TuiKeymap::default();
+        keymap.global.copy = Some(one("alt-3"));
+
+        expect_conflict(&keymap, "copy", "chat.set_reasoning_effort_high");
     }
 
     #[test]

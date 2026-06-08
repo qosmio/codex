@@ -1,9 +1,10 @@
-//! Keyboard shortcuts for stepping the active model's reasoning effort.
+//! Keyboard shortcuts for changing the active model's reasoning effort.
 //!
 //! The main chat surface treats `Alt+,` and `Alt+.` as small adjustments to the
-//! current model configuration. This module keeps that behavior separate from
-//! the larger `ChatWidget` key dispatcher while still reusing the same
-//! model-selection and Plan-mode scope paths as the settings popups.
+//! current model configuration, and `Alt+1` through `Alt+4` as direct effort
+//! selectors. This module keeps that behavior separate from the larger
+//! `ChatWidget` key dispatcher while still reusing the same model-selection and
+//! Plan-mode scope paths as the settings popups.
 //!
 //! The shortcut state machine is deliberately narrow: it only handles key
 //! presses when no modal or popup owns input, it anchors unset reasoning to the
@@ -26,6 +27,11 @@ use crate::key_hint::KeyBindingListExt;
 pub(super) enum ReasoningShortcutDirection {
     Lower,
     Raise,
+}
+
+enum ReasoningShortcut {
+    Step(ReasoningShortcutDirection),
+    Set(ReasoningEffortConfig),
 }
 
 impl ReasoningShortcutDirection {
@@ -51,18 +57,42 @@ impl ChatWidget {
     /// persisting them. In Plan mode, shortcuts apply only to the active
     /// Plan-mode override and skip the global-vs-Plan scope prompt.
     pub(super) fn handle_reasoning_shortcut(&mut self, key_event: KeyEvent) -> bool {
-        let direction = if self
+        let shortcut = if self
             .chat_keymap
             .decrease_reasoning_effort
             .is_pressed(key_event)
         {
-            ReasoningShortcutDirection::Lower
+            ReasoningShortcut::Step(ReasoningShortcutDirection::Lower)
         } else if self
             .chat_keymap
             .increase_reasoning_effort
             .is_pressed(key_event)
         {
-            ReasoningShortcutDirection::Raise
+            ReasoningShortcut::Step(ReasoningShortcutDirection::Raise)
+        } else if self
+            .chat_keymap
+            .set_reasoning_effort_low
+            .is_pressed(key_event)
+        {
+            ReasoningShortcut::Set(ReasoningEffortConfig::Low)
+        } else if self
+            .chat_keymap
+            .set_reasoning_effort_medium
+            .is_pressed(key_event)
+        {
+            ReasoningShortcut::Set(ReasoningEffortConfig::Medium)
+        } else if self
+            .chat_keymap
+            .set_reasoning_effort_high
+            .is_pressed(key_event)
+        {
+            ReasoningShortcut::Set(ReasoningEffortConfig::High)
+        } else if self
+            .chat_keymap
+            .set_reasoning_effort_xhigh
+            .is_pressed(key_event)
+        {
+            ReasoningShortcut::Set(ReasoningEffortConfig::XHigh)
         } else {
             return false;
         };
@@ -102,11 +132,30 @@ impl ChatWidget {
                 .cloned()
                 .unwrap_or(preset.default_reasoning_effort)
         };
-        let Some(next_effort) =
-            next_reasoning_effort(&choices, Some(current_effort.clone()), direction)
-        else {
-            self.add_info_message(direction.bound_message(&current_effort), /*hint*/ None);
-            return true;
+        let next_effort = match shortcut {
+            ReasoningShortcut::Step(direction) => {
+                let Some(next_effort) =
+                    next_reasoning_effort(&choices, Some(current_effort.clone()), direction)
+                else {
+                    self.add_info_message(
+                        direction.bound_message(&current_effort),
+                        /*hint*/ None,
+                    );
+                    return true;
+                };
+                next_effort
+            }
+            ReasoningShortcut::Set(effort) => {
+                if !choices.contains(&effort) {
+                    let label = Self::reasoning_effort_sentence_label(&effort);
+                    self.add_info_message(
+                        format!("Reasoning level {label} is unavailable for {current_model}."),
+                        /*hint*/ None,
+                    );
+                    return true;
+                }
+                effort
+            }
         };
 
         if self.collaboration_modes_enabled() && self.active_mode_kind() == ModeKind::Plan {

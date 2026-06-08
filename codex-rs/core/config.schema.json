@@ -3055,7 +3055,11 @@
               "decrease_reasoning_effort": null,
               "edit_queued_message": null,
               "increase_reasoning_effort": null,
-              "interrupt_turn": null
+              "interrupt_turn": null,
+              "set_reasoning_effort_high": null,
+              "set_reasoning_effort_low": null,
+              "set_reasoning_effort_medium": null,
+              "set_reasoning_effort_xhigh": null
             },
             "composer": {
               "history_search_next": null,
@@ -3392,6 +3396,38 @@
             }
           ],
           "description": "Interrupt the active turn."
+        },
+        "set_reasoning_effort_high": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/KeybindingsSpec"
+            }
+          ],
+          "description": "Set the active reasoning effort to high."
+        },
+        "set_reasoning_effort_low": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/KeybindingsSpec"
+            }
+          ],
+          "description": "Set the active reasoning effort to low."
+        },
+        "set_reasoning_effort_medium": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/KeybindingsSpec"
+            }
+          ],
+          "description": "Set the active reasoning effort to medium."
+        },
+        "set_reasoning_effort_xhigh": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/KeybindingsSpec"
+            }
+          ],
+          "description": "Set the active reasoning effort to extra high."
         }
       },
       "type": "object"
@@ -3704,7 +3740,11 @@
             "decrease_reasoning_effort": null,
             "edit_queued_message": null,
             "increase_reasoning_effort": null,
-            "interrupt_turn": null
+            "interrupt_turn": null,
+            "set_reasoning_effort_high": null,
+            "set_reasoning_effort_low": null,
+            "set_reasoning_effort_medium": null,
+            "set_reasoning_effort_xhigh": null
           }
         },
         "composer": {

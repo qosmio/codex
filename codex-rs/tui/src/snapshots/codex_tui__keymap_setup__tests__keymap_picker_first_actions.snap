@@ -1,12 +1,13 @@
 ---
 source: tui/src/keymap_setup.rs
+assertion_line: 1093
 expression: snapshot
 ---
-tab: All (108 selectable)
+tab: All (112 selectable)
 tab: Common (20 selectable)
 tab: Customized (0) (0 selectable)
 tab: Unbound (2) (2 selectable)
-tab: App (10 selectable)
+tab: App (14 selectable)
 tab: Composer (5 selectable)
 tab: Editor (17 selectable)
 tab: Vim (48 selectable)
@@ -22,6 +23,6 @@ Toggle Raw Output | alt-r | Global toggle_raw_output Toggle Raw Output Toggle ra
 Interrupt Turn | esc | Chat interrupt_turn Interrupt Turn Interrupt the active turn. esc Default
 Decrease Reasoning Effort | alt-,, shift-down | Chat decrease_reasoning_effort Decrease Reasoning Effort Decrease reasoning effort. alt-,, shift-down Default
 Increase Reasoning Effort | alt-., shift-up | Chat increase_reasoning_effort Increase Reasoning Effort Increase reasoning effort. alt-., shift-up Default
-Edit Queued Message | alt-up, shift-left | Chat edit_queued_message Edit Queued Message Edit the most recently queued message. alt-up, shift-left Default
-Submit | enter | Composer submit Submit Submit the current composer draft. enter Default
-Queue | tab | Composer queue Queue Queue the draft while a task is running. tab Default
+Set Reasoning Effort Low | alt-1 | Chat set_reasoning_effort_low Set Reasoning Effort Low Set reasoning effort to low. alt-1 Default
+Set Reasoning Effort Medium | alt-2 | Chat set_reasoning_effort_medium Set Reasoning Effort Medium Set reasoning effort to medium. alt-2 Default
+Set Reasoning Effort High | alt-3 | Chat set_reasoning_effort_high Set Reasoning Effort High Set reasoning effort to high. alt-3 Default

@@ -3314,6 +3314,51 @@ async fn reasoning_down_shortcuts_lower_reasoning_effort() {
 }
 
 #[tokio::test]
+async fn direct_reasoning_shortcuts_select_requested_effort() {
+    let cases = [
+        (
+            KeyEvent::new(KeyCode::Char('1'), KeyModifiers::ALT),
+            ReasoningEffortConfig::Low,
+        ),
+        (
+            KeyEvent::new(KeyCode::Char('2'), KeyModifiers::ALT),
+            ReasoningEffortConfig::Medium,
+        ),
+        (
+            KeyEvent::new(KeyCode::Char('3'), KeyModifiers::ALT),
+            ReasoningEffortConfig::High,
+        ),
+        (
+            KeyEvent::new(KeyCode::Char('4'), KeyModifiers::ALT),
+            ReasoningEffortConfig::XHigh,
+        ),
+    ];
+
+    for (key_event, expected_effort) in cases {
+        let (mut chat, mut rx, _op_rx) = make_chatwidget_manual(Some("gpt-5.4")).await;
+        chat.thread_id = Some(ThreadId::new());
+        chat.set_reasoning_effort(Some(ReasoningEffortConfig::Medium));
+
+        chat.handle_key_event(key_event);
+
+        let events = std::iter::from_fn(|| rx.try_recv().ok()).collect::<Vec<_>>();
+        assert!(
+            events.iter().any(|event| matches!(
+                event,
+                AppEvent::UpdateReasoningEffort(Some(effort)) if effort == &expected_effort
+            )),
+            "expected reasoning update event for {key_event:?}; events: {events:?}"
+        );
+        assert!(
+            events
+                .iter()
+                .all(|event| !matches!(event, AppEvent::PersistModelSelection { .. })),
+            "expected no model persistence event for {key_event:?}; events: {events:?}"
+        );
+    }
+}
+
+#[tokio::test]
 async fn reasoning_shortcut_clears_armed_quit_shortcut() {
     let (mut chat, mut rx, _op_rx) = make_chatwidget_manual(Some("gpt-5.4")).await;
     chat.thread_id = Some(ThreadId::new());
