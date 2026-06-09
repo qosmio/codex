@@ -3091,6 +3091,7 @@
               "clear_terminal": null,
               "copy": null,
               "open_external_editor": null,
+              "open_permissions_popup": null,
               "open_transcript": null,
               "queue": null,
               "submit": null,
@@ -3655,6 +3656,14 @@
           ],
           "description": "Open the external editor for the current draft."
         },
+        "open_permissions_popup": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/KeybindingsSpec"
+            }
+          ],
+          "description": "Open the permissions popup."
+        },
         "open_transcript": {
           "allOf": [
             {
@@ -3802,6 +3811,7 @@
             "clear_terminal": null,
             "copy": null,
             "open_external_editor": null,
+            "open_permissions_popup": null,
             "open_transcript": null,
             "queue": null,
             "submit": null,

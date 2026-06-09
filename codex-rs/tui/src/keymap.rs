@@ -72,6 +72,8 @@ pub(crate) struct AppKeymap {
     pub(crate) toggle_fast_mode: Vec<KeyBinding>,
     /// Toggle raw scrollback mode for copy-friendly transcript selection.
     pub(crate) toggle_raw_output: Vec<KeyBinding>,
+    /// Open the permissions popup.
+    pub(crate) open_permissions_popup: Vec<KeyBinding>,
 }
 
 /// Chat-level keybindings evaluated at the app event layer.
@@ -442,6 +444,11 @@ impl RuntimeKeymap {
                 keymap.global.toggle_raw_output.as_ref(),
                 &defaults.app.toggle_raw_output,
                 "tui.keymap.global.toggle_raw_output",
+            )?,
+            open_permissions_popup: resolve_bindings(
+                keymap.global.open_permissions_popup.as_ref(),
+                &defaults.app.open_permissions_popup,
+                "tui.keymap.global.open_permissions_popup",
             )?,
         };
 
@@ -972,6 +979,7 @@ impl RuntimeKeymap {
                 toggle_vim_mode: default_bindings![],
                 toggle_fast_mode: default_bindings![],
                 toggle_raw_output: default_bindings![alt(KeyCode::Char('r'))],
+                open_permissions_popup: default_bindings![],
             },
             chat: ChatKeymap {
                 interrupt_turn: default_bindings![plain(KeyCode::Esc)],
@@ -1257,6 +1265,10 @@ impl RuntimeKeymap {
             (
                 "toggle_raw_output".to_string(),
                 self.app.toggle_raw_output.as_slice(),
+            ),
+            (
+                "open_permissions_popup".to_string(),
+                self.app.open_permissions_popup.as_slice(),
             ),
             (
                 "chat.interrupt_turn".to_string(),

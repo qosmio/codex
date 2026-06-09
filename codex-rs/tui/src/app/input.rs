@@ -164,6 +164,13 @@ impl App {
             return;
         }
 
+        if app_keymap_shortcuts_available
+            && self.keymap.app.open_permissions_popup.is_pressed(key_event)
+        {
+            self.chat_widget.open_permissions_popup();
+            return;
+        }
+
         if app_keymap_shortcuts_available && self.keymap.app.open_transcript.is_pressed(key_event) {
             // Enter alternate screen and set viewport to full size.
             let _ = tui.enter_alt_screen();

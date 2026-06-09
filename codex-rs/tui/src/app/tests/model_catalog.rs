@@ -330,6 +330,26 @@ async fn model_shortcut_direct_binding_selects_the_target_model() {
 }
 
 #[tokio::test]
+async fn permissions_popup_shortcut_matches_the_configured_key() {
+    let mut app = make_test_app().await;
+    let mut keymap = codex_config::types::TuiKeymap::default();
+    keymap.global.open_permissions_popup =
+        Some(KeybindingsSpec::One(KeybindingSpec("f15".to_string())));
+    apply_test_keymap(&mut app, keymap);
+
+    let key_event = crossterm::event::KeyEvent::new(
+        crossterm::event::KeyCode::F(15),
+        crossterm::event::KeyModifiers::NONE,
+    );
+    assert!(app.keymap.app.open_permissions_popup.is_pressed(key_event));
+    assert!(app.chat_widget.no_modal_or_popup_active());
+
+    app.chat_widget.open_permissions_popup();
+
+    assert!(!app.chat_widget.no_modal_or_popup_active());
+}
+
+#[tokio::test]
 async fn accepted_model_migration_persists_target_default_reasoning_effort() {
     let codex_home = tempdir().expect("temp codex home");
     let mut config = ConfigBuilder::default()
