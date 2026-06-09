@@ -377,7 +377,7 @@ impl ChatWidget {
         self.active_mode_kind()
     }
 
-    pub(super) fn is_session_configured(&self) -> bool {
+    pub(crate) fn is_session_configured(&self) -> bool {
         self.thread_id.is_some()
     }
 

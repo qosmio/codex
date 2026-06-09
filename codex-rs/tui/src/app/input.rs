@@ -189,6 +189,10 @@ impl App {
             return;
         }
 
+        if app_keymap_shortcuts_available && self.handle_model_shortcuts(key_event) {
+            return;
+        }
+
         if matches!(key_event.code, KeyCode::Esc)
             && matches!(key_event.kind, KeyEventKind::Press | KeyEventKind::Repeat)
         {

@@ -1,5 +1,7 @@
 use super::*;
 use assert_matches::assert_matches;
+use codex_config::types::KeybindingSpec;
+use codex_config::types::KeybindingsSpec;
 use codex_config::types::ModelAvailabilityNuxConfig;
 use codex_protocol::openai_models::ModelAvailabilityNux;
 use pretty_assertions::assert_eq;
@@ -35,6 +37,13 @@ fn model_migration_copy_to_plain_text(copy: &crate::model_migration::ModelMigrat
         s.push('\n');
     }
     s
+}
+
+fn apply_test_keymap(app: &mut App, keymap: codex_config::types::TuiKeymap) {
+    let runtime = RuntimeKeymap::from_config(&keymap).expect("runtime keymap");
+    app.config.tui_keymap = keymap.clone();
+    app.keymap = runtime.clone();
+    app.chat_widget.apply_keymap_update(keymap, &runtime);
 }
 
 #[tokio::test]
@@ -211,6 +220,112 @@ async fn prepare_startup_tooltip_override_persists_model_availability_nux_count(
     assert_eq!(
         reloaded.model_availability_nux.shown_count,
         HashMap::from([("gpt-5.4".to_string(), 1)])
+    );
+}
+
+#[tokio::test]
+async fn model_shortcut_previous_and_next_cycle_through_the_catalog() {
+    let (mut app, mut app_event_rx, _op_rx) = make_test_app_with_channels().await;
+    let current_model = app.chat_widget.current_model().to_string();
+    let mut session = test_thread_session(ThreadId::new(), app.config.cwd.clone().to_path_buf());
+    session.model = current_model.clone();
+    app.chat_widget.handle_thread_session_quiet(session);
+    while app_event_rx.try_recv().is_ok() {}
+    let models = app
+        .chat_widget
+        .model_catalog()
+        .try_list_models()
+        .unwrap_or_default();
+    assert!(models.len() > 1);
+
+    let current = app.chat_widget.current_model().to_string();
+    let current_index = models
+        .iter()
+        .position(|preset| preset.model == current)
+        .expect("current model present in catalog");
+    let expected = models[(current_index + 1) % models.len()].model.clone();
+
+    let mut keymap = codex_config::types::TuiKeymap::default();
+    keymap.model.previous = Some(KeybindingsSpec::One(KeybindingSpec("f16".to_string())));
+    keymap.model.next = Some(KeybindingsSpec::One(KeybindingSpec("f13".to_string())));
+    apply_test_keymap(&mut app, keymap);
+    while app_event_rx.try_recv().is_ok() {}
+
+    assert!(app.handle_model_shortcuts(crossterm::event::KeyEvent::new(
+        crossterm::event::KeyCode::F(13),
+        crossterm::event::KeyModifiers::NONE,
+    )));
+
+    let events = std::iter::from_fn(|| app_event_rx.try_recv().ok()).collect::<Vec<_>>();
+    assert_eq!(events.len(), 3);
+    assert_matches!(&events[0], AppEvent::UpdateModel(model) if model == &expected);
+    assert_matches!(&events[1], AppEvent::UpdateReasoningEffort(Some(_)));
+    assert_matches!(
+        &events[2],
+        AppEvent::PersistModelSelection { model, effort: Some(_) } if model == &expected
+    );
+
+    app.chat_widget.set_model(&expected);
+    assert!(app.handle_model_shortcuts(crossterm::event::KeyEvent::new(
+        crossterm::event::KeyCode::F(16),
+        crossterm::event::KeyModifiers::NONE,
+    )));
+
+    let events = std::iter::from_fn(|| app_event_rx.try_recv().ok()).collect::<Vec<_>>();
+    assert_eq!(events.len(), 3);
+    assert_matches!(&events[0], AppEvent::UpdateModel(model) if model == &current);
+    assert_matches!(&events[1], AppEvent::UpdateReasoningEffort(Some(_)));
+    assert_matches!(
+        &events[2],
+        AppEvent::PersistModelSelection { model, effort: Some(_) } if model == &current
+    );
+}
+
+#[tokio::test]
+async fn model_shortcut_direct_binding_selects_the_target_model() {
+    let (mut app, mut app_event_rx, _op_rx) = make_test_app_with_channels().await;
+    let current_model = app.chat_widget.current_model().to_string();
+    let mut session = test_thread_session(ThreadId::new(), app.config.cwd.clone().to_path_buf());
+    session.model = current_model;
+    app.chat_widget.handle_thread_session_quiet(session);
+    while app_event_rx.try_recv().is_ok() {}
+    let models = app
+        .chat_widget
+        .model_catalog()
+        .try_list_models()
+        .unwrap_or_default();
+    let current = app.chat_widget.current_model().to_string();
+    let target = models
+        .iter()
+        .find(|preset| preset.model != current)
+        .expect("alternate model present");
+    let target_model = target.model.clone();
+    let target_effort = target.default_reasoning_effort.clone();
+
+    let mut keymap = codex_config::types::TuiKeymap::default();
+    keymap.model.bindings.insert(
+        target.id.clone(),
+        KeybindingsSpec::One(KeybindingSpec("f14".to_string())),
+    );
+    apply_test_keymap(&mut app, keymap);
+    while app_event_rx.try_recv().is_ok() {}
+
+    assert!(app.handle_model_shortcuts(crossterm::event::KeyEvent::new(
+        crossterm::event::KeyCode::F(14),
+        crossterm::event::KeyModifiers::NONE,
+    )));
+
+    let events = std::iter::from_fn(|| app_event_rx.try_recv().ok()).collect::<Vec<_>>();
+    assert_eq!(events.len(), 3);
+    assert_matches!(&events[0], AppEvent::UpdateModel(model) if model == &target_model);
+    assert_matches!(
+        &events[1],
+        AppEvent::UpdateReasoningEffort(Some(effort)) if effort == &target_effort
+    );
+    assert_matches!(
+        &events[2],
+        AppEvent::PersistModelSelection { model, effort: Some(effort) }
+        if model == &target_model && effort == &target_effort
     );
 }
 
