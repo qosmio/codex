@@ -30,9 +30,11 @@ impl ChatWidget {
     pub(crate) fn open_keymap_picker(&mut self) {
         match RuntimeKeymap::from_config(&self.config.tui_keymap) {
             Ok(runtime_keymap) => {
-                let params = keymap_setup::build_keymap_picker_params_with_filter(
+                let model_presets = self.model_catalog.try_list_models().unwrap_or_default();
+                let params = keymap_setup::build_keymap_picker_params_with_models_with_filter(
                     &runtime_keymap,
                     &self.config.tui_keymap,
+                    &model_presets,
                     self.keymap_action_filter(),
                 );
                 self.bottom_pane.show_selection_view(params);
@@ -54,11 +56,13 @@ impl ChatWidget {
         action: String,
         runtime_keymap: &RuntimeKeymap,
     ) {
-        let params = keymap_setup::build_keymap_action_menu_params(
+        let model_presets = self.model_catalog.try_list_models().unwrap_or_default();
+        let params = keymap_setup::build_keymap_action_menu_params_with_models(
             context,
             action,
             runtime_keymap,
             &self.config.tui_keymap,
+            &model_presets,
         );
         self.bottom_pane.show_selection_view(params);
     }
@@ -75,12 +79,14 @@ impl ChatWidget {
         intent: KeymapEditIntent,
         runtime_keymap: &RuntimeKeymap,
     ) {
-        let view = keymap_setup::build_keymap_capture_view(
+        let model_presets = self.model_catalog.try_list_models().unwrap_or_default();
+        let view = keymap_setup::build_keymap_capture_view_with_models(
             context,
             action,
             intent,
             runtime_keymap,
             self.app_event_tx.clone(),
+            &model_presets,
         );
         self.bottom_pane.show_view(Box::new(view));
         self.request_redraw();
@@ -88,7 +94,16 @@ impl ChatWidget {
 
     /// Opens the keypress inspector with the current runtime bindings.
     pub(crate) fn open_keymap_debug(&mut self, runtime_keymap: &RuntimeKeymap) {
-        let view = keymap_setup::build_keymap_debug_view(runtime_keymap, &self.config.tui_keymap);
+        let model_presets = self.model_catalog.try_list_models().unwrap_or_default();
+        let view = if model_presets.is_empty() {
+            keymap_setup::build_keymap_debug_view(runtime_keymap, &self.config.tui_keymap)
+        } else {
+            keymap_setup::build_keymap_debug_view_with_models(
+                runtime_keymap,
+                &self.config.tui_keymap,
+                &model_presets,
+            )
+        };
         self.bottom_pane.show_view(Box::new(view));
         self.request_redraw();
     }
@@ -104,8 +119,13 @@ impl ChatWidget {
         action: String,
         runtime_keymap: &RuntimeKeymap,
     ) {
-        let params =
-            keymap_setup::build_keymap_replace_binding_menu_params(context, action, runtime_keymap);
+        let model_presets = self.model_catalog.try_list_models().unwrap_or_default();
+        let params = keymap_setup::build_keymap_replace_binding_menu_params_with_models(
+            context,
+            action,
+            runtime_keymap,
+            &model_presets,
+        );
         self.bottom_pane.show_selection_view(params);
     }
 
@@ -121,13 +141,16 @@ impl ChatWidget {
         action: &str,
         runtime_keymap: &RuntimeKeymap,
     ) {
-        let params = keymap_setup::build_keymap_picker_params_for_selected_action_with_filter(
-            runtime_keymap,
-            &self.config.tui_keymap,
-            self.keymap_action_filter(),
-            context,
-            action,
-        );
+        let model_presets = self.model_catalog.try_list_models().unwrap_or_default();
+        let params =
+            keymap_setup::build_keymap_picker_params_for_selected_action_with_models_with_filter(
+                runtime_keymap,
+                &self.config.tui_keymap,
+                &model_presets,
+                self.keymap_action_filter(),
+                context,
+                action,
+            );
         let replaced = self.bottom_pane.replace_active_views_with_selection_view(
             &[
                 keymap_setup::KEYMAP_PICKER_VIEW_ID,
@@ -137,9 +160,10 @@ impl ChatWidget {
             params,
         );
         if !replaced {
-            let params = keymap_setup::build_keymap_picker_params_for_selected_action_with_filter(
+            let params = keymap_setup::build_keymap_picker_params_for_selected_action_with_models_with_filter(
                 runtime_keymap,
                 &self.config.tui_keymap,
+                &model_presets,
                 self.keymap_action_filter(),
                 context,
                 action,

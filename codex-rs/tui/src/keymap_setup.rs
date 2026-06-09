@@ -19,22 +19,33 @@
 
 mod actions;
 mod debug;
+mod model_actions;
 mod picker;
 
 pub(crate) use actions::KeymapActionFilter;
 pub(crate) use debug::build_keymap_debug_view;
+pub(crate) use debug::build_keymap_debug_view_with_models;
 pub(crate) use picker::KEYMAP_PICKER_VIEW_ID;
 #[cfg(test)]
 pub(crate) use picker::build_keymap_picker_params;
 #[cfg(test)]
 pub(crate) use picker::build_keymap_picker_params_for_selected_action;
+#[cfg(test)]
 pub(crate) use picker::build_keymap_picker_params_for_selected_action_with_filter;
+#[cfg(test)]
+pub(crate) use picker::build_keymap_picker_params_for_selected_action_with_models;
+pub(crate) use picker::build_keymap_picker_params_for_selected_action_with_models_with_filter;
+#[cfg(test)]
 pub(crate) use picker::build_keymap_picker_params_with_filter;
+#[cfg(test)]
+pub(crate) use picker::build_keymap_picker_params_with_models;
+pub(crate) use picker::build_keymap_picker_params_with_models_with_filter;
 
 use codex_config::types::KeybindingSpec;
 use codex_config::types::KeybindingsSpec;
 use codex_config::types::MAX_FUNCTION_KEY;
 use codex_config::types::TuiKeymap;
+use codex_protocol::openai_models::ModelPreset;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
@@ -66,6 +77,10 @@ use actions::bindings_for_action;
 use actions::format_binding_summary;
 #[cfg(test)]
 use debug::KeymapDebugView;
+pub(crate) use model_actions::is_model_binding_action;
+pub(crate) use model_actions::model_action_config_path;
+use model_actions::model_action_metadata;
+pub(crate) use model_actions::model_binding_config_path;
 
 pub(crate) const KEYMAP_ACTION_MENU_VIEW_ID: &str = "keymap-action-menu";
 pub(crate) const KEYMAP_REPLACE_BINDING_MENU_VIEW_ID: &str = "keymap-replace-binding-menu";
@@ -134,6 +149,45 @@ fn action_menu_item(
     }
 }
 
+struct KeymapActionDisplay {
+    context_label: String,
+    label: String,
+    description: String,
+    config_path: String,
+}
+
+fn keymap_action_display(
+    context: &str,
+    action: &str,
+    model_presets: &[ModelPreset],
+) -> KeymapActionDisplay {
+    if is_model_binding_action(context, action) {
+        let metadata = model_action_metadata(model_presets, action);
+        return KeymapActionDisplay {
+            context_label: model_actions::MODEL_CONTEXT_LABEL.to_string(),
+            label: metadata.label,
+            description: metadata.description,
+            config_path: model_binding_config_path(action),
+        };
+    }
+
+    let descriptor = KEYMAP_ACTIONS
+        .iter()
+        .find(|descriptor| descriptor.context == context && descriptor.action == action);
+    KeymapActionDisplay {
+        context_label: descriptor
+            .map(|descriptor| descriptor.context_label)
+            .unwrap_or(context)
+            .to_string(),
+        label: action_label(action),
+        description: descriptor
+            .map(|descriptor| descriptor.description)
+            .unwrap_or("Configure this shortcut.")
+            .to_string(),
+        config_path: model_action_config_path(context, action),
+    }
+}
+
 /// Build the action-specific menu after a user chooses a shortcut row.
 ///
 /// The menu is based on both active runtime bindings and root config state: the
@@ -141,11 +195,22 @@ fn action_menu_item(
 /// config state decides whether "remove custom binding" can restore fallback
 /// behavior. Passing stale context/action strings yields a generic fallback
 /// menu rather than panicking, because selection views can outlive config reloads.
+#[cfg(test)]
 pub(crate) fn build_keymap_action_menu_params(
     context: String,
     action: String,
     runtime_keymap: &RuntimeKeymap,
     keymap_config: &TuiKeymap,
+) -> SelectionViewParams {
+    build_keymap_action_menu_params_with_models(context, action, runtime_keymap, keymap_config, &[])
+}
+
+pub(crate) fn build_keymap_action_menu_params_with_models(
+    context: String,
+    action: String,
+    runtime_keymap: &RuntimeKeymap,
+    keymap_config: &TuiKeymap,
+    model_presets: &[ModelPreset],
 ) -> SelectionViewParams {
     let current_bindings =
         active_binding_specs(runtime_keymap, &context, &action).unwrap_or_else(|_| Vec::new());
@@ -156,24 +221,25 @@ pub(crate) fn build_keymap_action_menu_params(
     };
     let active_binding_count = current_bindings.len();
     let custom_binding = has_custom_binding(keymap_config, &context, &action).unwrap_or(false);
-    let descriptor = KEYMAP_ACTIONS
-        .iter()
-        .find(|descriptor| descriptor.context == context && descriptor.action == action);
-    let context_label = descriptor
-        .map(|descriptor| descriptor.context_label)
-        .unwrap_or(context.as_str())
-        .to_string();
-    let description = descriptor
-        .map(|descriptor| descriptor.description)
-        .unwrap_or("Configure this shortcut.");
-    let remove_disabled_reason = (!custom_binding)
-        .then(|| "There is no custom root binding for this action to remove.".to_string());
-    let label = action_label(&action);
+    let KeymapActionDisplay {
+        context_label,
+        label,
+        description,
+        config_path,
+    } = keymap_action_display(&context, &action, model_presets);
+    let remove_disabled_reason = (!custom_binding).then(|| {
+        if is_model_binding_action(&context, &action) {
+            "There is no direct model binding for this model to remove.".to_string()
+        } else {
+            "There is no custom root binding for this action to remove.".to_string()
+        }
+    });
     let remove_context = context.clone();
     let remove_action = action.clone();
-    let config_path = format!("tui.keymap.{context}.{action}");
     let source = if custom_binding {
         "Custom root override".cyan()
+    } else if is_model_binding_action(&context, &action) {
+        "No direct model binding".dim()
     } else {
         "Default keymap".dim()
     };
@@ -194,7 +260,7 @@ pub(crate) fn build_keymap_action_menu_params(
         "Config ".dim(),
         format!("`{config_path}`").cyan(),
     ]));
-    header.push(Line::from(description.to_string().dim()));
+    header.push(Line::from(description.dim()));
 
     let mut items = Vec::new();
     match active_binding_count {
@@ -302,19 +368,31 @@ pub(crate) fn build_keymap_action_menu_params(
     }
 }
 
+#[cfg(test)]
 pub(crate) fn build_keymap_replace_binding_menu_params(
     context: String,
     action: String,
     runtime_keymap: &RuntimeKeymap,
 ) -> SelectionViewParams {
+    build_keymap_replace_binding_menu_params_with_models(context, action, runtime_keymap, &[])
+}
+
+pub(crate) fn build_keymap_replace_binding_menu_params_with_models(
+    context: String,
+    action: String,
+    runtime_keymap: &RuntimeKeymap,
+    model_presets: &[ModelPreset],
+) -> SelectionViewParams {
     let bindings = active_binding_specs(runtime_keymap, &context, &action).unwrap_or_default();
-    let label = action_label(&action);
+    let KeymapActionDisplay {
+        label, config_path, ..
+    } = keymap_action_display(&context, &action, model_presets);
     let mut header = ColumnRenderable::new();
     header.push(Line::from("Replace Binding".bold()));
     header.push(Line::from(vec![
         label.bold(),
         " · ".dim(),
-        format!("{context}.{action}").dim(),
+        config_path.dim(),
     ]));
     header.push(Line::from("Choose the binding to replace.".dim()));
 
@@ -400,6 +478,7 @@ pub(crate) fn build_keymap_conflict_params(
 /// and then delegates the captured key back to the app event loop. Unknown
 /// actions are rendered as unbound so the eventual edit path can report the
 /// stale selection with a precise error.
+#[cfg(test)]
 pub(crate) fn build_keymap_capture_view(
     context: String,
     action: String,
@@ -407,10 +486,28 @@ pub(crate) fn build_keymap_capture_view(
     runtime_keymap: &RuntimeKeymap,
     app_event_tx: AppEventSender,
 ) -> KeymapCaptureView {
+    build_keymap_capture_view_with_models(
+        context,
+        action,
+        intent,
+        runtime_keymap,
+        app_event_tx,
+        &[],
+    )
+}
+
+pub(crate) fn build_keymap_capture_view_with_models(
+    context: String,
+    action: String,
+    intent: KeymapEditIntent,
+    runtime_keymap: &RuntimeKeymap,
+    app_event_tx: AppEventSender,
+    model_presets: &[ModelPreset],
+) -> KeymapCaptureView {
     let current_binding = format_binding_summary(
         bindings_for_action(runtime_keymap, &context, &action).unwrap_or(&[]),
     );
-    let label = action_label(&action);
+    let KeymapActionDisplay { label, .. } = keymap_action_display(&context, &action, model_presets);
     KeymapCaptureView::new(
         context,
         action,
@@ -513,6 +610,19 @@ fn keymap_with_bindings(
     keys: &[String],
 ) -> Result<TuiKeymap, String> {
     let mut keymap = keymap.clone();
+    if is_model_binding_action(context, action) {
+        let spec = match keys {
+            [key] => KeybindingsSpec::One(KeybindingSpec(key.clone())),
+            keys => KeybindingsSpec::Many(
+                keys.iter()
+                    .map(|key| KeybindingSpec(key.clone()))
+                    .collect::<Vec<_>>(),
+            ),
+        };
+        keymap.model.bindings.insert(action.to_string(), spec);
+        return Ok(keymap);
+    }
+
     let slot = binding_slot(&mut keymap, context, action).ok_or_else(|| {
         format!("Unknown keymap action `{context}.{action}`. Reopen /keymap and choose an action.")
     })?;
@@ -567,6 +677,11 @@ pub(crate) fn keymap_without_custom_binding(
     action: &str,
 ) -> Result<TuiKeymap, String> {
     let mut keymap = keymap.clone();
+    if is_model_binding_action(context, action) {
+        keymap.model.bindings.remove(action);
+        return Ok(keymap);
+    }
+
     let slot = binding_slot(&mut keymap, context, action).ok_or_else(|| {
         format!("Unknown keymap action `{context}.{action}`. Reopen /keymap and choose an action.")
     })?;
@@ -575,6 +690,10 @@ pub(crate) fn keymap_without_custom_binding(
 }
 
 fn has_custom_binding(keymap: &TuiKeymap, context: &str, action: &str) -> Result<bool, String> {
+    if is_model_binding_action(context, action) {
+        return Ok(keymap.model.bindings.contains_key(action));
+    }
+
     let mut keymap = keymap.clone();
     let slot = binding_slot(&mut keymap, context, action).ok_or_else(|| {
         format!("Unknown keymap action `{context}.{action}`. Reopen /keymap and choose an action.")
@@ -794,6 +913,9 @@ mod tests {
     use crate::bottom_pane::ListSelectionView;
     use crate::bottom_pane::SelectionTab;
     use crate::tui::FrameRequester;
+    use codex_protocol::openai_models::ModelPreset;
+    use codex_protocol::openai_models::ReasoningEffort as ReasoningEffortConfig;
+    use codex_protocol::openai_models::ReasoningEffortPreset;
     use insta::assert_snapshot;
     use pretty_assertions::assert_eq;
     use ratatui::buffer::Buffer;
@@ -889,6 +1011,46 @@ mod tests {
             .iter()
             .find(|item| item.name == name)
             .expect("selection item")
+    }
+
+    fn sample_model_preset(id: &str, display_name: &str) -> ModelPreset {
+        ModelPreset {
+            id: id.to_string(),
+            model: id.to_string(),
+            display_name: display_name.to_string(),
+            description: format!("{display_name} description"),
+            default_reasoning_effort: ReasoningEffortConfig::Medium,
+            supported_reasoning_efforts: vec![ReasoningEffortPreset {
+                effort: ReasoningEffortConfig::Medium,
+                description: "medium".to_string(),
+            }],
+            supports_personality: false,
+            additional_speed_tiers: Vec::new(),
+            service_tiers: Vec::new(),
+            default_service_tier: None,
+            is_default: false,
+            upgrade: None,
+            show_in_picker: true,
+            availability_nux: None,
+            supported_in_api: true,
+            input_modalities: Vec::new(),
+        }
+    }
+
+    fn sample_model_presets() -> Vec<ModelPreset> {
+        vec![
+            sample_model_preset("test-model-alpha", "Alpha"),
+            sample_model_preset("test-model-beta", "Beta"),
+        ]
+    }
+
+    fn keymap_with_model_binding(model_id: &str, binding: &str) -> TuiKeymap {
+        let mut keymap = TuiKeymap::default();
+        keymap.model.bindings.insert(
+            model_id.to_string(),
+            KeybindingsSpec::One(KeybindingSpec(binding.to_string())),
+        );
+        keymap
     }
 
     fn action_menu_rows(params: &SelectionViewParams) -> String {
@@ -1016,6 +1178,8 @@ mod tests {
                 "Global.open_external_editor",
                 "Global.copy",
                 "Global.toggle_vim_mode",
+                "Models.previous",
+                "Models.next",
                 "Editor.delete_backward_word",
                 "Editor.delete_forward_word",
                 "Editor.move_word_left",
@@ -1295,6 +1459,60 @@ mod tests {
         .join("\n");
 
         assert_snapshot!("keymap_action_menu", snapshot);
+    }
+
+    #[test]
+    fn model_shortcut_ui_snapshot() {
+        let model_presets = sample_model_presets();
+        let keymap = keymap_with_model_binding("test-model-alpha", "ctrl-1");
+        let runtime = RuntimeKeymap::from_config(&keymap).expect("runtime keymap");
+
+        let picker = build_keymap_picker_params_with_models(&runtime, &keymap, &model_presets);
+        let picker_render = render_picker(picker, /*width*/ 120);
+
+        let action_menu = build_keymap_action_menu_params_with_models(
+            "model.bindings".to_string(),
+            "test-model-alpha".to_string(),
+            &runtime,
+            &keymap,
+            &model_presets,
+        );
+        let action_menu_render = render_picker(action_menu, /*width*/ 100);
+
+        let capture_view = build_keymap_capture_view_with_models(
+            "model.bindings".to_string(),
+            "test-model-alpha".to_string(),
+            KeymapEditIntent::ReplaceAll,
+            &runtime,
+            app_event_sender(),
+            &model_presets,
+        );
+        let capture_render = render_buffer(&render_capture(
+            &capture_view,
+            /*width*/ 100,
+            /*height*/ 12,
+        ));
+
+        let mut debug_view = build_keymap_debug_view_with_models(&runtime, &keymap, &model_presets);
+        debug_view.handle_key_event(KeyEvent::new(KeyCode::Char('1'), KeyModifiers::CONTROL));
+        let debug_render = render_debug(&debug_view, /*width*/ 100);
+
+        let snapshot = [
+            "picker:",
+            &picker_render,
+            "",
+            "action menu:",
+            &action_menu_render,
+            "",
+            "capture:",
+            &capture_render,
+            "",
+            "debug:",
+            &debug_render,
+        ]
+        .join("\n");
+
+        assert_snapshot!("keymap_model_shortcuts", snapshot);
     }
 
     #[test]

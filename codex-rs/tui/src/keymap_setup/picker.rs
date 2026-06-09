@@ -1,6 +1,7 @@
 //! Shortcut picker construction for `/keymap`.
 
 use codex_config::types::TuiKeymap;
+use codex_protocol::openai_models::ModelPreset;
 use ratatui::style::Styled;
 use ratatui::style::Stylize;
 use ratatui::text::Line;
@@ -24,6 +25,12 @@ use super::actions::action_label;
 use super::actions::bindings_for_action;
 use super::actions::format_binding_summary;
 use super::has_custom_binding;
+use super::model_actions::MODEL_BINDINGS_CONTEXT;
+use super::model_actions::MODEL_CONTEXT_LABEL;
+use super::model_actions::model_action_config_path;
+use super::model_actions::model_action_ids;
+use super::model_actions::model_action_metadata;
+use super::model_actions::model_binding_config_path;
 
 pub(crate) const KEYMAP_PICKER_VIEW_ID: &str = "keymap-picker";
 pub(super) const KEYMAP_ALL_TAB_ID: &str = "all-shortcuts";
@@ -36,11 +43,12 @@ const KEYMAP_ROW_PREFIX_WIDTH: usize = KEYMAP_CONTEXT_LABEL_WIDTH + 3;
 
 #[derive(Clone, Debug)]
 struct KeymapActionRow {
-    context: &'static str,
-    context_label: &'static str,
-    action: &'static str,
+    context: String,
+    context_label: String,
+    action: String,
     label: String,
-    description: &'static str,
+    description: String,
+    config_path: String,
     binding_summary: String,
     custom_binding: bool,
 }
@@ -67,6 +75,8 @@ const KEYMAP_COMMON_ACTIONS: &[(&str, &str)] = &[
     ("global", "open_external_editor"),
     ("global", "copy"),
     ("global", "toggle_vim_mode"),
+    ("model", "previous"),
+    ("model", "next"),
     ("editor", "delete_backward_word"),
     ("editor", "delete_forward_word"),
     ("editor", "move_word_left"),
@@ -88,6 +98,12 @@ const KEYMAP_CONTEXT_TABS: &[KeymapContextTab] = &[
         label: "App",
         description: "Global and chat-level shortcuts.",
         contexts: &["global", "chat"],
+    },
+    KeymapContextTab {
+        id: "model-shortcuts",
+        label: "Models",
+        description: "Model cycling and direct model bindings.",
+        contexts: &["model", MODEL_BINDINGS_CONTEXT],
     },
     KeymapContextTab {
         id: "composer-shortcuts",
@@ -126,21 +142,52 @@ pub(crate) fn build_keymap_picker_params(
     runtime_keymap: &RuntimeKeymap,
     keymap_config: &TuiKeymap,
 ) -> SelectionViewParams {
-    build_keymap_picker_params_with_filter(
+    build_keymap_picker_params_with_models_with_filter(
         runtime_keymap,
         keymap_config,
+        &[],
         KeymapActionFilter::default(),
     )
 }
 
+#[cfg(test)]
 pub(crate) fn build_keymap_picker_params_with_filter(
     runtime_keymap: &RuntimeKeymap,
     keymap_config: &TuiKeymap,
     action_filter: KeymapActionFilter,
 ) -> SelectionViewParams {
+    build_keymap_picker_params_with_models_with_filter(
+        runtime_keymap,
+        keymap_config,
+        &[],
+        action_filter,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn build_keymap_picker_params_with_models(
+    runtime_keymap: &RuntimeKeymap,
+    keymap_config: &TuiKeymap,
+    model_presets: &[ModelPreset],
+) -> SelectionViewParams {
+    build_keymap_picker_params_with_models_with_filter(
+        runtime_keymap,
+        keymap_config,
+        model_presets,
+        KeymapActionFilter::default(),
+    )
+}
+
+pub(crate) fn build_keymap_picker_params_with_models_with_filter(
+    runtime_keymap: &RuntimeKeymap,
+    keymap_config: &TuiKeymap,
+    model_presets: &[ModelPreset],
+    action_filter: KeymapActionFilter,
+) -> SelectionViewParams {
     build_keymap_picker_params_for_action(
         runtime_keymap,
         keymap_config,
+        model_presets,
         action_filter,
         /*selected_action*/ None,
     )
@@ -153,15 +200,17 @@ pub(crate) fn build_keymap_picker_params_for_selected_action(
     context: &str,
     action: &str,
 ) -> SelectionViewParams {
-    build_keymap_picker_params_for_selected_action_with_filter(
+    build_keymap_picker_params_for_selected_action_with_models_with_filter(
         runtime_keymap,
         keymap_config,
+        &[],
         KeymapActionFilter::default(),
         context,
         action,
     )
 }
 
+#[cfg(test)]
 pub(crate) fn build_keymap_picker_params_for_selected_action_with_filter(
     runtime_keymap: &RuntimeKeymap,
     keymap_config: &TuiKeymap,
@@ -169,9 +218,46 @@ pub(crate) fn build_keymap_picker_params_for_selected_action_with_filter(
     context: &str,
     action: &str,
 ) -> SelectionViewParams {
+    build_keymap_picker_params_for_selected_action_with_models_with_filter(
+        runtime_keymap,
+        keymap_config,
+        &[],
+        action_filter,
+        context,
+        action,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn build_keymap_picker_params_for_selected_action_with_models(
+    runtime_keymap: &RuntimeKeymap,
+    keymap_config: &TuiKeymap,
+    model_presets: &[ModelPreset],
+    context: &str,
+    action: &str,
+) -> SelectionViewParams {
+    build_keymap_picker_params_for_selected_action_with_models_with_filter(
+        runtime_keymap,
+        keymap_config,
+        model_presets,
+        KeymapActionFilter::default(),
+        context,
+        action,
+    )
+}
+
+pub(crate) fn build_keymap_picker_params_for_selected_action_with_models_with_filter(
+    runtime_keymap: &RuntimeKeymap,
+    keymap_config: &TuiKeymap,
+    model_presets: &[ModelPreset],
+    action_filter: KeymapActionFilter,
+    context: &str,
+    action: &str,
+) -> SelectionViewParams {
     build_keymap_picker_params_for_action(
         runtime_keymap,
         keymap_config,
+        model_presets,
         action_filter,
         Some((context, action)),
     )
@@ -180,10 +266,11 @@ pub(crate) fn build_keymap_picker_params_for_selected_action_with_filter(
 fn build_keymap_picker_params_for_action(
     runtime_keymap: &RuntimeKeymap,
     keymap_config: &TuiKeymap,
+    model_presets: &[ModelPreset],
     action_filter: KeymapActionFilter,
     selected_action: Option<(&str, &str)>,
 ) -> SelectionViewParams {
-    let rows = build_keymap_rows(runtime_keymap, keymap_config, action_filter);
+    let rows = build_keymap_rows(runtime_keymap, keymap_config, model_presets, action_filter);
     let total = rows.len();
     let custom_count = rows.iter().filter(|row| row.custom_binding).count();
     let unbound_count = rows.iter().filter(|row| row.is_unbound()).count();
@@ -266,7 +353,7 @@ fn build_keymap_picker_params_for_action(
     for tab in KEYMAP_CONTEXT_TABS {
         let tab_rows = rows
             .iter()
-            .filter(|row| tab.contexts.contains(&row.context))
+            .filter(|row| tab.contexts.contains(&row.context.as_str()))
             .collect::<Vec<_>>();
         let count = tab_rows.len();
         tabs.push(SelectionTab {
@@ -329,9 +416,10 @@ fn keymap_debug_tab() -> SelectionTab {
 fn build_keymap_rows(
     runtime_keymap: &RuntimeKeymap,
     keymap_config: &TuiKeymap,
+    model_presets: &[ModelPreset],
     action_filter: KeymapActionFilter,
 ) -> Vec<KeymapActionRow> {
-    KEYMAP_ACTIONS
+    let mut rows = KEYMAP_ACTIONS
         .iter()
         .copied()
         .filter(|descriptor| descriptor.is_visible(action_filter))
@@ -340,16 +428,54 @@ fn build_keymap_rows(
                 bindings_for_action(runtime_keymap, descriptor.context, descriptor.action)
                     .unwrap_or(&[]);
             KeymapActionRow {
-                context: descriptor.context,
-                context_label: descriptor.context_label,
-                action: descriptor.action,
+                context: descriptor.context.to_string(),
+                context_label: descriptor.context_label.to_string(),
+                action: descriptor.action.to_string(),
                 label: action_label(descriptor.action),
-                description: descriptor.description,
+                description: descriptor.description.to_string(),
+                config_path: model_action_config_path(descriptor.context, descriptor.action),
                 binding_summary: format_binding_summary(bindings),
                 custom_binding: has_custom_binding(
                     keymap_config,
                     descriptor.context,
                     descriptor.action,
+                )
+                .unwrap_or(false),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    rows.extend(build_model_rows(
+        runtime_keymap,
+        keymap_config,
+        model_presets,
+    ));
+    rows
+}
+
+fn build_model_rows(
+    runtime_keymap: &RuntimeKeymap,
+    keymap_config: &TuiKeymap,
+    model_presets: &[ModelPreset],
+) -> Vec<KeymapActionRow> {
+    model_action_ids(model_presets, keymap_config.model.bindings.keys().cloned())
+        .into_iter()
+        .map(|model_id| {
+            let metadata = model_action_metadata(model_presets, &model_id);
+            let bindings = bindings_for_action(runtime_keymap, MODEL_BINDINGS_CONTEXT, &model_id)
+                .unwrap_or(&[]);
+            KeymapActionRow {
+                context: MODEL_BINDINGS_CONTEXT.to_string(),
+                context_label: MODEL_CONTEXT_LABEL.to_string(),
+                action: model_id.clone(),
+                label: metadata.label,
+                description: metadata.description,
+                config_path: model_binding_config_path(&model_id),
+                binding_summary: format_binding_summary(bindings),
+                custom_binding: has_custom_binding(
+                    keymap_config,
+                    MODEL_BINDINGS_CONTEXT,
+                    &model_id,
                 )
                 .unwrap_or(false),
             }
@@ -397,8 +523,14 @@ fn keymap_selection_item(row: &KeymapActionRow) -> SelectionItem {
         "Default"
     };
     let search_value = format!(
-        "{} {} {} {} {} {}",
-        row.context_label, row.action, row.label, row.description, row.binding_summary, source
+        "{} {} {} {} {} {} {}",
+        row.context_label,
+        row.action,
+        row.label,
+        row.description,
+        row.config_path,
+        row.binding_summary,
+        source
     );
 
     SelectionItem {

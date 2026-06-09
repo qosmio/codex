@@ -1,28 +1,29 @@
 ---
 source: tui/src/keymap_setup.rs
-assertion_line: 1093
+assertion_line: 1250
 expression: snapshot
 ---
-tab: All (112 selectable)
-tab: Common (20 selectable)
+tab: All (114 selectable)
+tab: Common (22 selectable)
 tab: Customized (0) (0 selectable)
-tab: Unbound (2) (2 selectable)
+tab: Unbound (4) (4 selectable)
 tab: App (14 selectable)
+tab: Models (2 selectable)
 tab: Composer (5 selectable)
 tab: Editor (17 selectable)
 tab: Vim (48 selectable)
 tab: Navigation (20 selectable)
 tab: Approval (8 selectable)
 tab: Debug (1 selectable)
-Open Transcript | ctrl-t | Global open_transcript Open Transcript Open the transcript overlay. ctrl-t Default
-Open External Editor | ctrl-g | Global open_external_editor Open External Editor Open the current draft in an external editor. ctrl-g Default
-Copy | ctrl-o | Global copy Copy Copy the last agent response to the clipboard. ctrl-o Default
-Clear Terminal | ctrl-l | Global clear_terminal Clear Terminal Clear the terminal UI. ctrl-l Default
-Toggle Vim Mode | unbound | Global toggle_vim_mode Toggle Vim Mode Turn Vim composer mode on or off. unbound Default
-Toggle Raw Output | alt-r | Global toggle_raw_output Toggle Raw Output Toggle raw scrollback mode. alt-r Default
-Interrupt Turn | esc | Chat interrupt_turn Interrupt Turn Interrupt the active turn. esc Default
-Decrease Reasoning Effort | alt-,, shift-down | Chat decrease_reasoning_effort Decrease Reasoning Effort Decrease reasoning effort. alt-,, shift-down Default
-Increase Reasoning Effort | alt-., shift-up | Chat increase_reasoning_effort Increase Reasoning Effort Increase reasoning effort. alt-., shift-up Default
-Set Reasoning Effort Low | alt-1 | Chat set_reasoning_effort_low Set Reasoning Effort Low Set reasoning effort to low. alt-1 Default
-Set Reasoning Effort Medium | alt-2 | Chat set_reasoning_effort_medium Set Reasoning Effort Medium Set reasoning effort to medium. alt-2 Default
-Set Reasoning Effort High | alt-3 | Chat set_reasoning_effort_high Set Reasoning Effort High Set reasoning effort to high. alt-3 Default
+Open Transcript | ctrl-t | Global open_transcript Open Transcript Open the transcript overlay. tui.keymap.global.open_transcript ctrl-t Default
+Open External Editor | ctrl-g | Global open_external_editor Open External Editor Open the current draft in an external editor. tui.keymap.global.open_external_editor ctrl-g Default
+Copy | ctrl-o | Global copy Copy Copy the last agent response to the clipboard. tui.keymap.global.copy ctrl-o Default
+Clear Terminal | ctrl-l | Global clear_terminal Clear Terminal Clear the terminal UI. tui.keymap.global.clear_terminal ctrl-l Default
+Toggle Vim Mode | unbound | Global toggle_vim_mode Toggle Vim Mode Turn Vim composer mode on or off. tui.keymap.global.toggle_vim_mode unbound Default
+Toggle Raw Output | alt-r | Global toggle_raw_output Toggle Raw Output Toggle raw scrollback mode. tui.keymap.global.toggle_raw_output alt-r Default
+Interrupt Turn | esc | Chat interrupt_turn Interrupt Turn Interrupt the active turn. tui.keymap.chat.interrupt_turn esc Default
+Decrease Reasoning Effort | alt-,, shift-down | Chat decrease_reasoning_effort Decrease Reasoning Effort Decrease reasoning effort. tui.keymap.chat.decrease_reasoning_effort alt-,, shift-down Default
+Increase Reasoning Effort | alt-., shift-up | Chat increase_reasoning_effort Increase Reasoning Effort Increase reasoning effort. tui.keymap.chat.increase_reasoning_effort alt-., shift-up Default
+Set Reasoning Effort Low | alt-1 | Chat set_reasoning_effort_low Set Reasoning Effort Low Set reasoning effort to low. tui.keymap.chat.set_reasoning_effort_low alt-1 Default
+Set Reasoning Effort Medium | alt-2 | Chat set_reasoning_effort_medium Set Reasoning Effort Medium Set reasoning effort to medium. tui.keymap.chat.set_reasoning_effort_medium alt-2 Default
+Set Reasoning Effort High | alt-3 | Chat set_reasoning_effort_high Set Reasoning Effort High Set reasoning effort to high. tui.keymap.chat.set_reasoning_effort_high alt-3 Default

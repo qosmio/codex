@@ -1,4 +1,5 @@
 use codex_config::types::TuiKeymap;
+use codex_protocol::openai_models::ModelPreset;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
@@ -36,6 +37,7 @@ struct KeymapDebugReport {
 pub(crate) struct KeymapDebugView {
     runtime_keymap: RuntimeKeymap,
     keymap_config: TuiKeymap,
+    model_presets: Vec<ModelPreset>,
     opened_at: Instant,
     last_report: Option<KeymapDebugReport>,
     complete: bool,
@@ -45,9 +47,18 @@ pub(crate) fn build_keymap_debug_view(
     runtime_keymap: &RuntimeKeymap,
     keymap_config: &TuiKeymap,
 ) -> KeymapDebugView {
+    build_keymap_debug_view_with_models(runtime_keymap, keymap_config, &[])
+}
+
+pub(crate) fn build_keymap_debug_view_with_models(
+    runtime_keymap: &RuntimeKeymap,
+    keymap_config: &TuiKeymap,
+    model_presets: &[ModelPreset],
+) -> KeymapDebugView {
     KeymapDebugView {
         runtime_keymap: runtime_keymap.clone(),
         keymap_config: keymap_config.clone(),
+        model_presets: model_presets.to_vec(),
         opened_at: Instant::now(),
         last_report: None,
         complete: false,
@@ -162,6 +173,7 @@ impl BottomPaneView for KeymapDebugView {
             matches: matching_actions_for_key_event(
                 &self.runtime_keymap,
                 &self.keymap_config,
+                &self.model_presets,
                 key_event,
             ),
         });

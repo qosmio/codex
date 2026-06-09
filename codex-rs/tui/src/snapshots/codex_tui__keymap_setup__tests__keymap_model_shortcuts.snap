@@ -1,0 +1,66 @@
+---
+source: tui/src/keymap_setup.rs
+assertion_line: 1508
+expression: snapshot
+---
+picker:
+
+  Keymap
+  All configurable shortcuts.
+  116 actions, 1 customized, 5 unbound.
+
+  [All]  Common  Customized (1)  Unbound (5)  App  Models  Composer  Editor  Vim  Navigation  Approval  Debug
+
+  Type to search shortcuts
+› Global         Open Transcript              ctrl-t
+  Global         Open External Editor         ctrl-g
+  Global         Copy                         ctrl-o
+  Global         Clear Terminal               ctrl-l
+  Global       - Toggle Vim Mode              unbound
+  Global         Toggle Raw Output            alt-r
+  Chat           Interrupt Turn               esc
+  Chat           Decrease Reasoning Effort    alt-,, shift-down
+
+  left/right group · enter edit shortcut · * custom · - unbound · esc close
+
+action menu:
+
+  Edit Shortcut
+  Alpha · Models
+  Current ctrl-1 · Custom root override
+  Config `tui.keymap.model.bindings.test-model-alpha`
+  Alpha description
+
+› 1. Replace binding         Capture one key and replace `ctrl-1`.
+  2. Add alternate binding   Keep the current binding and add another key.
+  3. Remove custom binding   Restore the default keymap binding.
+  4. Back to shortcuts       Return to the shortcut list.
+
+  Changes write the root `tui.keymap.*` override.
+  enter select · esc back
+
+capture:
+Remap Shortcut
+Action: Alpha  model.bindings.test-model-alpha
+Current: ctrl-1
+Press the new key now. Esc cancels.
+
+
+
+
+
+
+
+
+
+debug:
+Keypress Inspector
+Press any key to see what Codex receives. Esc is inspected; Ctrl+C closes.
+Tip: Codex can only inspect keys your terminal sends.
+
+Detected: ctrl + 1
+Config key: ctrl-1
+Raw event: code=Char('1'), modifiers=ctrl, kind=Press
+
+Assigned actions:
+  - model.bindings.test-model-alpha (Alpha) - Alpha description [Custom]

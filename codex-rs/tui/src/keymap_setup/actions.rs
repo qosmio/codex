@@ -15,10 +15,16 @@ use std::collections::BTreeSet;
 
 use codex_config::types::KeybindingsSpec;
 use codex_config::types::TuiKeymap;
+use codex_protocol::openai_models::ModelPreset;
 use crossterm::event::KeyEvent;
 
 use crate::key_hint::KeyBinding;
 use crate::keymap::RuntimeKeymap;
+
+use super::model_actions::MODEL_BINDINGS_CONTEXT;
+use super::model_actions::is_model_binding_action;
+use super::model_actions::model_action_ids;
+use super::model_actions::model_action_metadata;
 
 #[derive(Clone, Copy, Debug)]
 pub(super) struct KeymapActionDescriptor {
@@ -101,6 +107,8 @@ pub(super) const KEYMAP_ACTIONS: &[KeymapActionDescriptor] = &[
     action("chat", "Chat", "set_reasoning_effort_high", "Set reasoning effort to high."),
     action("chat", "Chat", "set_reasoning_effort_xhigh", "Set reasoning effort to extra high."),
     action("chat", "Chat", "edit_queued_message", "Edit the most recently queued message."),
+    action("model", "Models", "previous", "Move to the previous model in the catalog."),
+    action("model", "Models", "next", "Move to the next model in the catalog."),
     action("composer", "Composer", "submit", "Submit the current composer draft."),
     action("composer", "Composer", "queue", "Queue the draft while a task is running."),
     action("composer", "Composer", "toggle_shortcuts", "Show or hide the composer shortcut overlay."),
@@ -240,6 +248,8 @@ pub(super) fn binding_slot<'a>(
         ("global", "toggle_vim_mode") => Some(&mut keymap.global.toggle_vim_mode),
         ("global", "toggle_fast_mode") => Some(&mut keymap.global.toggle_fast_mode),
         ("global", "toggle_raw_output") => Some(&mut keymap.global.toggle_raw_output),
+        ("model", "previous") => Some(&mut keymap.model.previous),
+        ("model", "next") => Some(&mut keymap.model.next),
         ("chat", "interrupt_turn") => Some(&mut keymap.chat.interrupt_turn),
         ("chat", "decrease_reasoning_effort") => Some(&mut keymap.chat.decrease_reasoning_effort),
         ("chat", "increase_reasoning_effort") => Some(&mut keymap.chat.increase_reasoning_effort),
@@ -362,6 +372,15 @@ pub(super) fn bindings_for_action<'a>(
     action: &str,
 ) -> Option<&'a [KeyBinding]> {
     match (context, action) {
+        ("model", "previous") => Some(runtime_keymap.model.previous.as_slice()),
+        ("model", "next") => Some(runtime_keymap.model.next.as_slice()),
+        _ if is_model_binding_action(context, action) => Some(
+            runtime_keymap
+                .model
+                .bindings
+                .get(action)
+                .map_or(&[], Vec::as_slice),
+        ),
         ("global", "open_transcript") => Some(runtime_keymap.app.open_transcript.as_slice()),
         ("global", "open_external_editor") => Some(runtime_keymap.app.open_external_editor.as_slice()),
         ("global", "copy") => Some(runtime_keymap.app.copy.as_slice()),
@@ -517,19 +536,20 @@ impl KeymapDebugBindingSource {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct KeymapDebugActionMatch {
-    pub(super) context: &'static str,
-    pub(super) action: &'static str,
+    pub(super) context: String,
+    pub(super) action: String,
     pub(super) label: String,
-    pub(super) description: &'static str,
+    pub(super) description: String,
     pub(super) source: KeymapDebugBindingSource,
 }
 
 pub(super) fn matching_actions_for_key_event(
     runtime_keymap: &RuntimeKeymap,
     keymap_config: &TuiKeymap,
+    model_presets: &[ModelPreset],
     event: KeyEvent,
 ) -> Vec<KeymapDebugActionMatch> {
-    KEYMAP_ACTIONS
+    let mut matches = KEYMAP_ACTIONS
         .iter()
         .filter_map(|descriptor| {
             let bindings =
@@ -538,29 +558,64 @@ pub(super) fn matching_actions_for_key_event(
                 .iter()
                 .any(|binding| binding.is_press(event))
                 .then(|| KeymapDebugActionMatch {
-                    context: descriptor.context,
-                    action: descriptor.action,
+                    context: descriptor.context.to_string(),
+                    action: descriptor.action.to_string(),
                     label: action_label(descriptor.action),
-                    description: descriptor.description,
-                    source: debug_binding_source(keymap_config, descriptor),
+                    description: descriptor.description.to_string(),
+                    source: debug_binding_source(
+                        keymap_config,
+                        descriptor.context,
+                        descriptor.action,
+                    ),
                 })
         })
-        .collect()
+        .collect::<Vec<_>>();
+
+    let model_ids = model_action_ids(model_presets, keymap_config.model.bindings.keys().cloned());
+    for model_id in model_ids {
+        let Some(bindings) = bindings_for_action(runtime_keymap, MODEL_BINDINGS_CONTEXT, &model_id)
+        else {
+            continue;
+        };
+        if !bindings.iter().any(|binding| binding.is_press(event)) {
+            continue;
+        }
+
+        let metadata = model_action_metadata(model_presets, &model_id);
+        matches.push(KeymapDebugActionMatch {
+            context: MODEL_BINDINGS_CONTEXT.to_string(),
+            action: model_id.clone(),
+            label: metadata.label,
+            description: metadata.description,
+            source: debug_binding_source(keymap_config, MODEL_BINDINGS_CONTEXT, &model_id),
+        });
+    }
+
+    matches
 }
 
 fn debug_binding_source(
     keymap_config: &TuiKeymap,
-    descriptor: &KeymapActionDescriptor,
+    context: &str,
+    action: &str,
 ) -> KeymapDebugBindingSource {
+    if is_model_binding_action(context, action) {
+        return if keymap_config.model.bindings.contains_key(action) {
+            KeymapDebugBindingSource::Custom
+        } else {
+            KeymapDebugBindingSource::Default
+        };
+    }
+
     let mut keymap_config = keymap_config.clone();
-    let Some(slot) = binding_slot(&mut keymap_config, descriptor.context, descriptor.action) else {
+    let Some(slot) = binding_slot(&mut keymap_config, context, action) else {
         return KeymapDebugBindingSource::Default;
     };
     if slot.is_some() {
         return KeymapDebugBindingSource::Custom;
     }
 
-    let Some(global_slot) = global_fallback_slot(&mut keymap_config, descriptor) else {
+    let Some(global_slot) = global_fallback_slot(&mut keymap_config, context, action) else {
         return KeymapDebugBindingSource::Default;
     };
     if global_slot.is_some() {
@@ -572,13 +627,14 @@ fn debug_binding_source(
 
 fn global_fallback_slot<'a>(
     keymap: &'a mut TuiKeymap,
-    descriptor: &KeymapActionDescriptor,
+    context: &str,
+    action: &str,
 ) -> Option<&'a mut Option<KeybindingsSpec>> {
-    if descriptor.context != "composer" {
+    if context != "composer" {
         return None;
     }
 
-    match descriptor.action {
+    match action {
         "submit" => Some(&mut keymap.global.submit),
         "queue" => Some(&mut keymap.global.queue),
         "toggle_shortcuts" => Some(&mut keymap.global.toggle_shortcuts),
