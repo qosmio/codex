@@ -395,6 +395,23 @@ pub struct TuiApprovalKeymap {
     pub cancel: Option<KeybindingsSpec>,
 }
 
+/// Model-switching keybindings.
+///
+/// `previous` and `next` cycle through the current model catalog. The `bindings`
+/// map lets users bind a stable model preset id to a shortcut directly.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[schemars(deny_unknown_fields)]
+pub struct TuiModelKeymap {
+    /// Move to the previous model in the catalog.
+    pub previous: Option<KeybindingsSpec>,
+    /// Move to the next model in the catalog.
+    pub next: Option<KeybindingsSpec>,
+    /// Bind a stable model preset id to a shortcut.
+    #[serde(default)]
+    pub bindings: BTreeMap<String, KeybindingsSpec>,
+}
+
 /// Raw keymap configuration from `[tui.keymap]`.
 ///
 /// Each context contains action-level overrides. Missing actions inherit from
@@ -413,6 +430,8 @@ pub struct TuiKeymap {
     pub global: TuiGlobalKeymap,
     #[serde(default)]
     pub chat: TuiChatKeymap,
+    #[serde(default)]
+    pub model: TuiModelKeymap,
     #[serde(default)]
     pub composer: TuiComposerKeymap,
     #[serde(default)]

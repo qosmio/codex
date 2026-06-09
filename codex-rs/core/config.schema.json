@@ -3111,6 +3111,11 @@
               "page_down": null,
               "page_up": null
             },
+            "model": {
+              "bindings": {},
+              "next": null,
+              "previous": null
+            },
             "pager": {
               "close": null,
               "close_transcript": null,
@@ -3825,6 +3830,18 @@
             "page_up": null
           }
         },
+        "model": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/TuiModelKeymap"
+            }
+          ],
+          "default": {
+            "bindings": {},
+            "next": null,
+            "previous": null
+          }
+        },
         "pager": {
           "allOf": [
             {
@@ -4005,6 +4022,37 @@
             }
           ],
           "description": "Move list selection up by one page."
+        }
+      },
+      "type": "object"
+    },
+    "TuiModelKeymap": {
+      "additionalProperties": false,
+      "description": "Model-switching keybindings.\n\n`previous` and `next` cycle through the current model catalog. The `bindings` map lets users bind a stable model preset id to a shortcut directly.",
+      "properties": {
+        "bindings": {
+          "additionalProperties": {
+            "$ref": "#/definitions/KeybindingsSpec"
+          },
+          "default": {},
+          "description": "Bind a stable model preset id to a shortcut.",
+          "type": "object"
+        },
+        "next": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/KeybindingsSpec"
+            }
+          ],
+          "description": "Move to the next model in the catalog."
+        },
+        "previous": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/KeybindingsSpec"
+            }
+          ],
+          "description": "Move to the previous model in the catalog."
         }
       },
       "type": "object"

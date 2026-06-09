@@ -26,6 +26,7 @@ use codex_config::types::TuiKeymap;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyModifiers;
 use serde::Serialize;
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 /// Runtime keymap used by TUI input handlers.
@@ -44,6 +45,7 @@ use std::collections::HashMap;
 pub(crate) struct RuntimeKeymap {
     pub(crate) app: AppKeymap,
     pub(crate) chat: ChatKeymap,
+    pub(crate) model: ModelKeymap,
     pub(crate) composer: ComposerKeymap,
     pub(crate) editor: EditorKeymap,
     pub(crate) vim_normal: VimNormalKeymap,
@@ -96,6 +98,17 @@ pub(crate) struct ChatKeymap {
     pub(crate) set_reasoning_effort_xhigh: Vec<KeyBinding>,
     /// Edit the most recently queued message.
     pub(crate) edit_queued_message: Vec<KeyBinding>,
+}
+
+/// Model-switching keybindings.
+#[derive(Clone, Debug, Default)]
+pub(crate) struct ModelKeymap {
+    /// Move to the previous model in the catalog.
+    pub(crate) previous: Vec<KeyBinding>,
+    /// Move to the next model in the catalog.
+    pub(crate) next: Vec<KeyBinding>,
+    /// Bind a stable model preset id to a shortcut.
+    pub(crate) bindings: BTreeMap<String, Vec<KeyBinding>>,
 }
 
 /// Composer-level keybindings validated in the second app-scope conflict pass.
@@ -473,6 +486,20 @@ impl RuntimeKeymap {
                 &defaults.chat.edit_queued_message,
                 "tui.keymap.chat.edit_queued_message",
             )?,
+        };
+
+        let model = ModelKeymap {
+            previous: resolve_bindings(
+                keymap.model.previous.as_ref(),
+                &defaults.model.previous,
+                "tui.keymap.model.previous",
+            )?,
+            next: resolve_bindings(
+                keymap.model.next.as_ref(),
+                &defaults.model.next,
+                "tui.keymap.model.next",
+            )?,
+            bindings: resolve_model_bindings(&keymap.model.bindings)?,
         };
 
         let composer = ComposerKeymap {
@@ -915,6 +942,7 @@ impl RuntimeKeymap {
         let resolved = Self {
             app,
             chat,
+            model,
             composer,
             editor,
             vim_normal,
@@ -960,6 +988,11 @@ impl RuntimeKeymap {
                 set_reasoning_effort_high: default_bindings![alt(KeyCode::Char('3'))],
                 set_reasoning_effort_xhigh: default_bindings![alt(KeyCode::Char('4'))],
                 edit_queued_message: default_bindings![alt(KeyCode::Up), shift(KeyCode::Left)],
+            },
+            model: ModelKeymap {
+                previous: default_bindings![],
+                next: default_bindings![],
+                bindings: BTreeMap::new(),
             },
             composer: ComposerKeymap {
                 submit: default_bindings![plain(KeyCode::Enter)],
@@ -1184,6 +1217,101 @@ impl RuntimeKeymap {
         }
     }
 
+    fn model_action_pairs(&self) -> Vec<(String, &[KeyBinding])> {
+        let mut pairs = vec![
+            ("model.previous".to_string(), self.model.previous.as_slice()),
+            ("model.next".to_string(), self.model.next.as_slice()),
+        ];
+        pairs.extend(
+            self.model
+                .bindings
+                .iter()
+                .map(|(model_id, bindings)| (format!("model.{model_id}"), bindings.as_slice())),
+        );
+        pairs
+    }
+
+    fn main_surface_action_pairs(&self) -> Vec<(String, &[KeyBinding])> {
+        let mut pairs = vec![
+            (
+                "open_transcript".to_string(),
+                self.app.open_transcript.as_slice(),
+            ),
+            (
+                "open_external_editor".to_string(),
+                self.app.open_external_editor.as_slice(),
+            ),
+            ("copy".to_string(), self.app.copy.as_slice()),
+            (
+                "clear_terminal".to_string(),
+                self.app.clear_terminal.as_slice(),
+            ),
+            (
+                "toggle_vim_mode".to_string(),
+                self.app.toggle_vim_mode.as_slice(),
+            ),
+            (
+                "toggle_fast_mode".to_string(),
+                self.app.toggle_fast_mode.as_slice(),
+            ),
+            (
+                "toggle_raw_output".to_string(),
+                self.app.toggle_raw_output.as_slice(),
+            ),
+            (
+                "chat.interrupt_turn".to_string(),
+                self.chat.interrupt_turn.as_slice(),
+            ),
+            (
+                "chat.decrease_reasoning_effort".to_string(),
+                self.chat.decrease_reasoning_effort.as_slice(),
+            ),
+            (
+                "chat.increase_reasoning_effort".to_string(),
+                self.chat.increase_reasoning_effort.as_slice(),
+            ),
+            (
+                "chat.set_reasoning_effort_low".to_string(),
+                self.chat.set_reasoning_effort_low.as_slice(),
+            ),
+            (
+                "chat.set_reasoning_effort_medium".to_string(),
+                self.chat.set_reasoning_effort_medium.as_slice(),
+            ),
+            (
+                "chat.set_reasoning_effort_high".to_string(),
+                self.chat.set_reasoning_effort_high.as_slice(),
+            ),
+            (
+                "chat.set_reasoning_effort_xhigh".to_string(),
+                self.chat.set_reasoning_effort_xhigh.as_slice(),
+            ),
+            (
+                "chat.edit_queued_message".to_string(),
+                self.chat.edit_queued_message.as_slice(),
+            ),
+            (
+                "composer.submit".to_string(),
+                self.composer.submit.as_slice(),
+            ),
+            ("composer.queue".to_string(), self.composer.queue.as_slice()),
+            (
+                "composer.toggle_shortcuts".to_string(),
+                self.composer.toggle_shortcuts.as_slice(),
+            ),
+            (
+                "composer.history_search_previous".to_string(),
+                self.composer.history_search_previous.as_slice(),
+            ),
+            (
+                "composer.history_search_next".to_string(),
+                self.composer.history_search_next.as_slice(),
+            ),
+        ];
+        pairs.extend(self.model_action_pairs());
+        pairs
+    }
+
     /// Reject ambiguous bindings in scopes that are evaluated together.
     ///
     /// We validate in multiple passes because runtime handling has mixed
@@ -1194,122 +1322,19 @@ impl RuntimeKeymap {
     /// 2. Contexts with hard-coded sequence behavior, such as edit-previous
     ///    backtracking, intentionally stay outside this configurable keymap.
     fn validate_conflicts(&self) -> Result<(), String> {
+        let main_surface_bindings = self.main_surface_action_pairs();
         validate_unique(
             "app",
-            [
-                ("open_transcript", self.app.open_transcript.as_slice()),
-                (
-                    "open_external_editor",
-                    self.app.open_external_editor.as_slice(),
-                ),
-                ("copy", self.app.copy.as_slice()),
-                ("clear_terminal", self.app.clear_terminal.as_slice()),
-                ("toggle_vim_mode", self.app.toggle_vim_mode.as_slice()),
-                ("toggle_fast_mode", self.app.toggle_fast_mode.as_slice()),
-                ("toggle_raw_output", self.app.toggle_raw_output.as_slice()),
-                ("chat.interrupt_turn", self.chat.interrupt_turn.as_slice()),
-                (
-                    "chat.decrease_reasoning_effort",
-                    self.chat.decrease_reasoning_effort.as_slice(),
-                ),
-                (
-                    "chat.increase_reasoning_effort",
-                    self.chat.increase_reasoning_effort.as_slice(),
-                ),
-                (
-                    "chat.set_reasoning_effort_low",
-                    self.chat.set_reasoning_effort_low.as_slice(),
-                ),
-                (
-                    "chat.set_reasoning_effort_medium",
-                    self.chat.set_reasoning_effort_medium.as_slice(),
-                ),
-                (
-                    "chat.set_reasoning_effort_high",
-                    self.chat.set_reasoning_effort_high.as_slice(),
-                ),
-                (
-                    "chat.set_reasoning_effort_xhigh",
-                    self.chat.set_reasoning_effort_xhigh.as_slice(),
-                ),
-                (
-                    "chat.edit_queued_message",
-                    self.chat.edit_queued_message.as_slice(),
-                ),
-                ("composer.submit", self.composer.submit.as_slice()),
-                ("composer.queue", self.composer.queue.as_slice()),
-                (
-                    "composer.toggle_shortcuts",
-                    self.composer.toggle_shortcuts.as_slice(),
-                ),
-                (
-                    "composer.history_search_previous",
-                    self.composer.history_search_previous.as_slice(),
-                ),
-                (
-                    "composer.history_search_next",
-                    self.composer.history_search_next.as_slice(),
-                ),
-            ],
+            main_surface_bindings
+                .iter()
+                .map(|(action, bindings)| (action.as_str(), *bindings)),
         )?;
 
         validate_no_reserved(
             "main",
-            [
-                ("open_transcript", self.app.open_transcript.as_slice()),
-                (
-                    "open_external_editor",
-                    self.app.open_external_editor.as_slice(),
-                ),
-                ("copy", self.app.copy.as_slice()),
-                ("clear_terminal", self.app.clear_terminal.as_slice()),
-                ("toggle_vim_mode", self.app.toggle_vim_mode.as_slice()),
-                ("toggle_fast_mode", self.app.toggle_fast_mode.as_slice()),
-                ("toggle_raw_output", self.app.toggle_raw_output.as_slice()),
-                ("chat.interrupt_turn", self.chat.interrupt_turn.as_slice()),
-                (
-                    "chat.decrease_reasoning_effort",
-                    self.chat.decrease_reasoning_effort.as_slice(),
-                ),
-                (
-                    "chat.increase_reasoning_effort",
-                    self.chat.increase_reasoning_effort.as_slice(),
-                ),
-                (
-                    "chat.set_reasoning_effort_low",
-                    self.chat.set_reasoning_effort_low.as_slice(),
-                ),
-                (
-                    "chat.set_reasoning_effort_medium",
-                    self.chat.set_reasoning_effort_medium.as_slice(),
-                ),
-                (
-                    "chat.set_reasoning_effort_high",
-                    self.chat.set_reasoning_effort_high.as_slice(),
-                ),
-                (
-                    "chat.set_reasoning_effort_xhigh",
-                    self.chat.set_reasoning_effort_xhigh.as_slice(),
-                ),
-                (
-                    "chat.edit_queued_message",
-                    self.chat.edit_queued_message.as_slice(),
-                ),
-                ("composer.submit", self.composer.submit.as_slice()),
-                ("composer.queue", self.composer.queue.as_slice()),
-                (
-                    "composer.toggle_shortcuts",
-                    self.composer.toggle_shortcuts.as_slice(),
-                ),
-                (
-                    "composer.history_search_previous",
-                    self.composer.history_search_previous.as_slice(),
-                ),
-                (
-                    "composer.history_search_next",
-                    self.composer.history_search_next.as_slice(),
-                ),
-            ],
+            main_surface_bindings
+                .iter()
+                .map(|(action, bindings)| (action.as_str(), *bindings)),
             MAIN_RESERVED_BINDINGS,
             [(
                 "chat.interrupt_turn",
@@ -1318,114 +1343,13 @@ impl RuntimeKeymap {
             )],
         )?;
 
-        validate_no_shadow_with_allowed_overlaps(
-            "app",
-            [
-                ("open_transcript", self.app.open_transcript.as_slice()),
-                (
-                    "open_external_editor",
-                    self.app.open_external_editor.as_slice(),
-                ),
-                ("copy", self.app.copy.as_slice()),
-                ("clear_terminal", self.app.clear_terminal.as_slice()),
-                ("toggle_vim_mode", self.app.toggle_vim_mode.as_slice()),
-                ("toggle_fast_mode", self.app.toggle_fast_mode.as_slice()),
-                ("toggle_raw_output", self.app.toggle_raw_output.as_slice()),
-            ],
-            [
-                ("list.move_up", self.list.move_up.as_slice()),
-                ("list.move_down", self.list.move_down.as_slice()),
-                ("list.move_left", self.list.move_left.as_slice()),
-                ("list.move_right", self.list.move_right.as_slice()),
-                ("list.page_up", self.list.page_up.as_slice()),
-                ("list.page_down", self.list.page_down.as_slice()),
-                ("list.jump_top", self.list.jump_top.as_slice()),
-                ("list.jump_bottom", self.list.jump_bottom.as_slice()),
-                ("list.accept", self.list.accept.as_slice()),
-                ("list.cancel", self.list.cancel.as_slice()),
-                (
-                    "approval.open_fullscreen",
-                    self.approval.open_fullscreen.as_slice(),
-                ),
-                ("approval.open_thread", self.approval.open_thread.as_slice()),
-                ("approval.approve", self.approval.approve.as_slice()),
-                (
-                    "approval.approve_for_session",
-                    self.approval.approve_for_session.as_slice(),
-                ),
-                (
-                    "approval.approve_for_prefix",
-                    self.approval.approve_for_prefix.as_slice(),
-                ),
-                ("approval.deny", self.approval.deny.as_slice()),
-                ("approval.decline", self.approval.decline.as_slice()),
-                ("approval.cancel", self.approval.cancel.as_slice()),
-            ],
-            [(
-                "clear_terminal",
-                "list.move_right",
-                key_hint::ctrl(KeyCode::Char('l')),
-            )],
-        )?;
-
-        // The request-user-input overlay consumes turn interruption before
-        // configurable question navigation reaches its list handler.
-        validate_no_shadow_with_allowed_overlaps(
-            "request_user_input",
-            [("chat.interrupt_turn", self.chat.interrupt_turn.as_slice())],
-            [
-                ("list.move_left", self.list.move_left.as_slice()),
-                ("list.move_right", self.list.move_right.as_slice()),
-            ],
-            [],
-        )?;
-
         // While the composer is focused, these main-surface handlers always
         // consume matching keys before the event reaches the textarea editor.
         validate_no_shadow_with_allowed_overlaps(
             "main",
-            [
-                ("open_transcript", self.app.open_transcript.as_slice()),
-                (
-                    "open_external_editor",
-                    self.app.open_external_editor.as_slice(),
-                ),
-                ("copy", self.app.copy.as_slice()),
-                ("clear_terminal", self.app.clear_terminal.as_slice()),
-                ("chat.interrupt_turn", self.chat.interrupt_turn.as_slice()),
-                (
-                    "chat.decrease_reasoning_effort",
-                    self.chat.decrease_reasoning_effort.as_slice(),
-                ),
-                (
-                    "chat.increase_reasoning_effort",
-                    self.chat.increase_reasoning_effort.as_slice(),
-                ),
-                (
-                    "chat.set_reasoning_effort_low",
-                    self.chat.set_reasoning_effort_low.as_slice(),
-                ),
-                (
-                    "chat.set_reasoning_effort_medium",
-                    self.chat.set_reasoning_effort_medium.as_slice(),
-                ),
-                (
-                    "chat.set_reasoning_effort_high",
-                    self.chat.set_reasoning_effort_high.as_slice(),
-                ),
-                (
-                    "chat.set_reasoning_effort_xhigh",
-                    self.chat.set_reasoning_effort_xhigh.as_slice(),
-                ),
-                ("composer.submit", self.composer.submit.as_slice()),
-                ("toggle_vim_mode", self.app.toggle_vim_mode.as_slice()),
-                ("toggle_fast_mode", self.app.toggle_fast_mode.as_slice()),
-                ("toggle_raw_output", self.app.toggle_raw_output.as_slice()),
-                (
-                    "composer.history_search_previous",
-                    self.composer.history_search_previous.as_slice(),
-                ),
-            ],
+            main_surface_bindings
+                .iter()
+                .map(|(action, bindings)| (action.as_str(), *bindings)),
             [
                 (
                     "editor.insert_newline",
@@ -1772,15 +1696,17 @@ See the Codex keymap documentation for supported actions and examples."
 ///
 /// This intentionally allows the same key across different contexts; handlers
 /// only evaluate one context at a time.
-fn validate_unique<const N: usize>(
-    context: &str,
-    pairs: [(&'static str, &[KeyBinding]); N],
-) -> Result<(), String> {
-    let mut seen: HashMap<(KeyCode, KeyModifiers), &'static str> = HashMap::new();
+fn validate_unique<'a, I, S>(context: &str, pairs: I) -> Result<(), String>
+where
+    I: IntoIterator<Item = (S, &'a [KeyBinding])>,
+    S: AsRef<str>,
+{
+    let mut seen: HashMap<(KeyCode, KeyModifiers), String> = HashMap::new();
     for (action, bindings) in pairs {
+        let action = action.as_ref();
         for binding in bindings {
             let key = binding.parts();
-            if let Some(previous) = seen.insert(key, action) {
+            if let Some(previous) = seen.insert(key, action.to_string()) {
                 return Err(format!(
                     "Ambiguous `tui.keymap.{context}` bindings: `{previous}` and `{action}` use the same key. \
 Set unique keys in `~/.codex/config.toml` and retry. \
@@ -1792,25 +1718,33 @@ See the Codex keymap documentation for supported actions and examples."
     Ok(())
 }
 
-fn validate_no_shadow_with_allowed_overlaps<const N: usize, const M: usize, const A: usize>(
+fn validate_no_shadow_with_allowed_overlaps<'a, 'b, I, J, S1, S2, const A: usize>(
     context: &str,
-    primary: [(&'static str, &[KeyBinding]); N],
-    shadowed: [(&'static str, &[KeyBinding]); M],
+    primary: I,
+    shadowed: J,
     allowed_overlaps: [(&'static str, &'static str, KeyBinding); A],
-) -> Result<(), String> {
-    let mut seen: HashMap<(KeyCode, KeyModifiers), &'static str> = HashMap::new();
+) -> Result<(), String>
+where
+    I: IntoIterator<Item = (S1, &'a [KeyBinding])>,
+    J: IntoIterator<Item = (S2, &'b [KeyBinding])>,
+    S1: AsRef<str>,
+    S2: AsRef<str>,
+{
+    let mut seen: HashMap<(KeyCode, KeyModifiers), String> = HashMap::new();
     for (action, bindings) in primary {
+        let action = action.as_ref();
         for binding in bindings {
-            seen.insert(binding.parts(), action);
+            seen.insert(binding.parts(), action.to_string());
         }
     }
     for (action, bindings) in shadowed {
+        let action = action.as_ref();
         for binding in bindings {
             let key = binding.parts();
             if let Some(previous) = seen.get(&key) {
                 if allowed_overlaps.iter().any(
                     |(allowed_primary, allowed_shadowed, allowed_binding)| {
-                        *allowed_primary == *previous
+                        *allowed_primary == previous.as_str()
                             && *allowed_shadowed == action
                             && allowed_binding.parts() == key
                     },
@@ -1828,13 +1762,18 @@ See the Codex keymap documentation for supported actions and examples."
     Ok(())
 }
 
-fn validate_no_reserved<const N: usize, const A: usize>(
+fn validate_no_reserved<'a, I, S, const A: usize>(
     context: &str,
-    pairs: [(&'static str, &[KeyBinding]); N],
+    pairs: I,
     reserved: &[(&'static str, KeyBinding)],
     allowed_overlaps: [(&'static str, &'static str, KeyBinding); A],
-) -> Result<(), String> {
+) -> Result<(), String>
+where
+    I: IntoIterator<Item = (S, &'a [KeyBinding])>,
+    S: AsRef<str>,
+{
     for (action, bindings) in pairs {
+        let action = action.as_ref();
         for binding in bindings {
             let key = binding.parts();
             if let Some((reserved_action, _)) = reserved
@@ -1942,6 +1881,17 @@ fn resolve_bindings(
     parse_bindings(spec, path)
 }
 
+fn resolve_model_bindings(
+    configured: &BTreeMap<String, KeybindingsSpec>,
+) -> Result<BTreeMap<String, Vec<KeyBinding>>, String> {
+    let mut resolved = BTreeMap::new();
+    for (model_id, spec) in configured {
+        let path = format!("tui.keymap.model.bindings.{model_id}");
+        resolved.insert(model_id.clone(), parse_bindings(spec, &path)?);
+    }
+    Ok(resolved)
+}
+
 fn configured_bindings_to_preserve<const N: usize>(
     pairs: [(Option<&KeybindingsSpec>, &[KeyBinding]); N],
 ) -> Vec<KeyBinding> {
@@ -1976,6 +1926,7 @@ fn configured_main_surface_alias_is_used(keymap: &TuiKeymap, alias: &str) -> boo
     // path.
     configured_context_alias_is_used(&global, alias)
         || configured_context_alias_is_used(&keymap.chat, alias)
+        || configured_context_alias_is_used(&keymap.model, alias)
         || configured_context_alias_is_used(&keymap.composer, alias)
         || configured_context_alias_is_used(&keymap.editor, alias)
         || configured_context_alias_is_used(&keymap.vim_normal, alias)
