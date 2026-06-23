@@ -18,9 +18,10 @@ doctest = false
 workspace = true
 
 [features]
-default = ["amazon-bedrock"]
+default = ["amazon-bedrock", "system-clipboard"]
 amazon-bedrock = ["codex-model-provider/amazon-bedrock"]
 code-mode = ["codex-core/code-mode"]
+system-clipboard = ["codex-tui/system-clipboard"]
 
 [dependencies]
 anyhow = { workspace = true }

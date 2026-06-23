@@ -21,6 +21,10 @@ doctest = false
 [lints]
 workspace = true
 
+[features]
+default = ["system-clipboard"]
+system-clipboard = ["dep:arboard"]
+
 [dependencies]
 anyhow = { workspace = true }
 base64 = { workspace = true }

@@ -5,7 +5,9 @@ use tempfile::Builder;
 #[derive(Debug, Clone)]
 pub enum PasteImageError {
     ClipboardUnavailable(String),
+    #[cfg(feature = "system-clipboard")]
     NoImage(String),
+    #[cfg(feature = "system-clipboard")]
     EncodeFailed(String),
     IoError(String),
 }
@@ -14,7 +16,9 @@ impl std::fmt::Display for PasteImageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             PasteImageError::ClipboardUnavailable(msg) => write!(f, "clipboard unavailable: {msg}"),
+            #[cfg(feature = "system-clipboard")]
             PasteImageError::NoImage(msg) => write!(f, "no image on clipboard: {msg}"),
+            #[cfg(feature = "system-clipboard")]
             PasteImageError::EncodeFailed(msg) => write!(f, "could not encode image: {msg}"),
             PasteImageError::IoError(msg) => write!(f, "io error: {msg}"),
         }
@@ -47,7 +51,7 @@ pub struct PastedImageInfo {
 }
 
 /// Capture image from system clipboard, encode to PNG, and return bytes + info.
-#[cfg(not(target_os = "android"))]
+#[cfg(all(feature = "system-clipboard", not(target_os = "android")))]
 pub fn paste_image_as_png() -> Result<(Vec<u8>, PastedImageInfo), PasteImageError> {
     let _span = tracing::debug_span!("paste_image_as_png").entered();
     tracing::debug!("attempting clipboard image read");
@@ -108,11 +112,11 @@ pub fn paste_image_as_png() -> Result<(Vec<u8>, PastedImageInfo), PasteImageErro
     ))
 }
 
-/// Android/Termux does not support arboard; return a clear error.
-#[cfg(target_os = "android")]
+/// Native image clipboard support is optional and unavailable on Android/Termux.
+#[cfg(any(not(feature = "system-clipboard"), target_os = "android"))]
 pub fn paste_image_as_png() -> Result<(Vec<u8>, PastedImageInfo), PasteImageError> {
     Err(PasteImageError::ClipboardUnavailable(
-        "clipboard image paste is unsupported on Android".into(),
+        "clipboard image paste is not compiled into this build".into(),
     ))
 }
 
@@ -160,9 +164,15 @@ fn try_wsl_clipboard_fallback(
     error: &PasteImageError,
 ) -> Result<(PathBuf, PastedImageInfo), PasteImageError> {
     use PasteImageError::ClipboardUnavailable;
-    use PasteImageError::NoImage;
 
-    if !is_probably_wsl() || !matches!(error, ClipboardUnavailable(_) | NoImage(_)) {
+    let should_try_fallback = match error {
+        ClipboardUnavailable(_) => true,
+        #[cfg(feature = "system-clipboard")]
+        PasteImageError::NoImage(_) => true,
+        _ => false,
+    };
+
+    if !is_probably_wsl() || !should_try_fallback {
         return Err(error.clone());
     }
 

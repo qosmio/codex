@@ -24,7 +24,7 @@ use std::io::Write;
 /// Maximum raw bytes we will base64-encode into an OSC 52 sequence.
 /// Large payloads are rejected before encoding to avoid overwhelming the terminal.
 const OSC52_MAX_RAW_BYTES: usize = 100_000;
-#[cfg(target_os = "macos")]
+#[cfg(all(feature = "system-clipboard", target_os = "macos"))]
 static STDERR_SUPPRESSION_MUTEX: std::sync::OnceLock<std::sync::Mutex<()>> =
     std::sync::OnceLock::new();
 
@@ -61,12 +61,12 @@ pub(crate) fn copy_to_clipboard(text: &str) -> Result<Option<ClipboardLease>, St
 /// paths the lease is `None` — those backends do not require process-lifetime
 /// ownership.
 pub(crate) struct ClipboardLease {
-    #[cfg(target_os = "linux")]
+    #[cfg(all(feature = "system-clipboard", target_os = "linux"))]
     _clipboard: Option<arboard::Clipboard>,
 }
 
 impl ClipboardLease {
-    #[cfg(target_os = "linux")]
+    #[cfg(all(feature = "system-clipboard", target_os = "linux"))]
     fn native_linux(clipboard: arboard::Clipboard) -> Self {
         Self {
             _clipboard: Some(clipboard),
@@ -76,7 +76,7 @@ impl ClipboardLease {
     #[cfg(test)]
     pub(crate) fn test() -> Self {
         Self {
-            #[cfg(target_os = "linux")]
+            #[cfg(all(feature = "system-clipboard", target_os = "linux"))]
             _clipboard: None,
         }
     }
@@ -222,7 +222,11 @@ fn is_wsl_session() -> bool {
 /// triggers `os_log` / `NSLog` output on stderr. Because the TUI owns the
 /// terminal, that stray output corrupts the display. We temporarily redirect
 /// fd 2 to `/dev/null` around the call to keep the screen clean.
-#[cfg(all(not(target_os = "android"), not(target_os = "linux")))]
+#[cfg(all(
+    feature = "system-clipboard",
+    not(target_os = "android"),
+    not(target_os = "linux")
+))]
 fn arboard_copy(text: &str) -> Result<Option<ClipboardLease>, String> {
     #[cfg(target_os = "macos")]
     let _stderr_lock = STDERR_SUPPRESSION_MUTEX
@@ -243,7 +247,7 @@ fn arboard_copy(text: &str) -> Result<Option<ClipboardLease>, String> {
 /// On Linux/X11 and some Wayland setups, clipboard contents are served by the
 /// process that last wrote them. Keep the `Clipboard` alive so the copied text
 /// remains pasteable while the TUI is running.
-#[cfg(target_os = "linux")]
+#[cfg(all(feature = "system-clipboard", target_os = "linux"))]
 fn arboard_copy(text: &str) -> Result<Option<ClipboardLease>, String> {
     let _guard = SuppressStderr::new();
     let mut clipboard =
@@ -254,9 +258,9 @@ fn arboard_copy(text: &str) -> Result<Option<ClipboardLease>, String> {
     Ok(Some(ClipboardLease::native_linux(clipboard)))
 }
 
-#[cfg(target_os = "android")]
+#[cfg(any(not(feature = "system-clipboard"), target_os = "android"))]
 fn arboard_copy(_text: &str) -> Result<Option<ClipboardLease>, String> {
-    Err("native clipboard unavailable on Android".to_string())
+    Err("native clipboard support is not compiled into this build".to_string())
 }
 
 /// Copy text into the Windows clipboard from a WSL process.
@@ -399,12 +403,12 @@ fn tmux_command_output<const N: usize>(args: [&str; N]) -> Result<String, String
 
 /// RAII guard that redirects stderr (fd 2) to `/dev/null` on creation and
 /// restores the original fd on drop.
-#[cfg(target_os = "macos")]
+#[cfg(all(feature = "system-clipboard", target_os = "macos"))]
 struct SuppressStderr {
     saved_fd: Option<libc::c_int>,
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(all(feature = "system-clipboard", target_os = "macos"))]
 impl SuppressStderr {
     fn new() -> Self {
         unsafe {
@@ -432,7 +436,7 @@ impl SuppressStderr {
     }
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(all(feature = "system-clipboard", target_os = "macos"))]
 impl Drop for SuppressStderr {
     fn drop(&mut self) {
         if let Some(saved) = self.saved_fd {
@@ -444,10 +448,18 @@ impl Drop for SuppressStderr {
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(all(
+    feature = "system-clipboard",
+    not(target_os = "macos"),
+    not(target_os = "android")
+))]
 struct SuppressStderr;
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(all(
+    feature = "system-clipboard",
+    not(target_os = "macos"),
+    not(target_os = "android")
+))]
 impl SuppressStderr {
     fn new() -> Self {
         Self
